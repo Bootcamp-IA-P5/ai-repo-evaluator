@@ -1,8 +1,8 @@
 import { type ClassValue, clsx } from 'clsx';
 
 /**
- * Utility para combinar classNames de Tailwind CSS
- * Útil para componentes con estilos condicionales
+ * Utility to combine Tailwind CSS classNames
+ * Useful for components with conditional styles
  * 
  * @example
  * cn('text-base', isActive && 'font-bold', className)

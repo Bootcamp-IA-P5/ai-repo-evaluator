@@ -1,9 +1,9 @@
 /**
- * Funciones de utilidad generales
+ * General utility functions
  */
 
 /**
- * Formatea una fecha a string legible
+ * Formats a date to a readable string
  */
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -17,14 +17,14 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
- * Formatea un porcentaje
+ * Formats a percentage
  */
 export function formatPercentage(value: number, decimals: number = 1): string {
   return `${value.toFixed(decimals)}%`;
 }
 
 /**
- * Trunca un texto a una longitud máxima
+ * Truncates text to a maximum length
  */
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
@@ -32,7 +32,7 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
- * Valida una URL de GitHub
+ * Validates a GitHub URL
  */
 export function isValidGitHubUrl(url: string): boolean {
   const githubRegex = /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/;
@@ -40,7 +40,7 @@ export function isValidGitHubUrl(url: string): boolean {
 }
 
 /**
- * Extrae owner y repo de una URL de GitHub
+ * Extracts owner and repo from a GitHub URL
  */
 export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);

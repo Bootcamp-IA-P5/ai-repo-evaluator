@@ -1,8 +1,8 @@
 /**
- * Tipos TypeScript compartidos en toda la aplicación
+ * Shared TypeScript types across the application
  */
 
-// === TIPOS DE RÚBRICA ===
+// === RUBRIC TYPES ===
 export interface RubricCriteria {
   id: string;
   name: string;
@@ -21,7 +21,7 @@ export interface Rubric {
   updatedAt?: string;
 }
 
-// === TIPOS DE EVALUACIÓN ===
+// === EVALUATION TYPES ===
 export interface EvaluationRequest {
   rubricId: string;
   briefingFile: File;
@@ -68,7 +68,7 @@ export interface Finding {
   priority: 'low' | 'medium' | 'high';
 }
 
-// === TIPOS DE LLM ===
+// === LLM TYPES ===
 export type LLMProvider = 'openai' | 'groq' | 'anthropic';
 
 export interface LLMModel {
@@ -78,7 +78,7 @@ export interface LLMModel {
   contextWindow: number;
 }
 
-// === TIPOS DE REPOSITORIO ===
+// === REPOSITORY TYPES ===
 export interface Repository {
   url: string;
   owner: string;
@@ -87,7 +87,7 @@ export interface Repository {
   lastCommit?: string;
 }
 
-// === TIPOS DE RESPUESTA API ===
+// === API RESPONSE TYPES ===
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

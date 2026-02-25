@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * Cliente HTTP configurado para comunicarse con el backend FastAPI
+ * HTTP client configured to communicate with the FastAPI backend
  */
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -12,11 +12,11 @@ const apiClient = axios.create({
 });
 
 /**
- * Interceptor de peticiones - Añade headers personalizados si es necesario
+ * Request interceptor - Add custom headers if needed
  */
 apiClient.interceptors.request.use(
   (config) => {
-    // Aquí puedes añadir tokens de autenticación si los usas
+    // You can add authentication tokens here if needed
     // const token = localStorage.getItem('token');
     // if (token) {
     //   config.headers.Authorization = `Bearer ${token}`;
@@ -29,22 +29,22 @@ apiClient.interceptors.request.use(
 );
 
 /**
- * Interceptor de respuestas - Maneja errores globalmente
+ * Response interceptor - Handle errors globally
  */
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // Manejo centralizado de errores
+    // Centralized error handling
     if (error.response) {
-      // El servidor respondió con un código de error
-      console.error('Error de respuesta:', error.response.data);
+      // The server responded with an error code
+      console.error('Response error:', error.response.data);
     } else if (error.request) {
-      // La petición fue hecha pero no hubo respuesta
-      console.error('Error de petición:', error.request);
+      // The request was made but no response was received
+      console.error('Request error:', error.request);
     } else {
-      // Algo más falló
+      // Something else failed
       console.error('Error:', error.message);
     }
     return Promise.reject(error);
