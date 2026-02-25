@@ -32,21 +32,38 @@ export function truncate(text: string, maxLength: number): string {
 }
 
 /**
- * Validates a GitHub URL
+ * Validates a GitHub repository URL
+ * Only accepts URLs with github.com hostname and exactly owner/repo structure
  */
 export function isValidGitHubUrl(url: string): boolean {
-  const githubRegex = /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/;
-  return githubRegex.test(url);
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.hostname !== 'github.com' && parsedUrl.hostname !== 'www.github.com') {
+      return false;
+    }
+    const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+    return pathSegments.length === 2 && pathSegments.every(seg => seg.length > 0);
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Extracts owner and repo from a GitHub URL
+ * Returns null if the URL is not a valid GitHub repository URL
  */
 export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-  if (!match) return null;
-  return {
-    owner: match[1],
-    repo: match[2].replace(/\.git$/, ''),
-  };
+  if (!isValidGitHubUrl(url)) {
+    return null;
+  }
+  try {
+    const parsedUrl = new URL(url);
+    const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+    return {
+      owner: pathSegments[0],
+      repo: pathSegments[1].replace(/\.git$/, ''),
+    };
+  } catch {
+    return null;
+  }
 }

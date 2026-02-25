@@ -1,91 +1,91 @@
 # AI Repo Evaluator - Frontend
 
-Frontend del asistente de evaluación de repositorios con IA para el bootcamp de IA.
+Frontend for the AI-powered repository evaluation assistant for the AI bootcamp.
 
-## 🚀 Tecnologías
+## 🚀 Technologies
 
-- **[Next.js 14](https://nextjs.org/)** - Framework React con App Router
-- **[TypeScript](https://www.typescriptlang.org/)** - JavaScript tipado
-- **[Tailwind CSS](https://tailwindcss.com/)** - Framework CSS utility-first
-- **[Axios](https://axios-http.com/)** - Cliente HTTP
-- **[Lucide React](https://lucide.dev/)** - Iconos
-- **[Recharts](https://recharts.org/)** - Gráficos
+- **[Next.js 16.1.6](https://nextjs.org/)** - React framework with App Router
+- **[TypeScript](https://www.typescriptlang.org/)** - Typed JavaScript
+- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
+- **[Axios](https://axios-http.com/)** - HTTP client
+- **[Lucide React](https://lucide.dev/)** - Icons
+- **[Recharts](https://recharts.org/)** - Charts
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 frontend/
-├── app/                    # App Router de Next.js
-│   ├── layout.tsx         # Layout principal
-│   ├── page.tsx           # Página de inicio
-│   └── globals.css        # Estilos globales
-├── components/            # Componentes React
-│   ├── ui/               # Componentes UI reutilizables
-│   ├── layout/           # Componentes de layout (Header, Footer, etc.)
-│   └── forms/            # Componentes de formularios
-├── lib/                  # Utilidades y configuraciones
-│   ├── api/             # Cliente API y endpoints
-│   └── utils/           # Funciones de utilidad
-├── types/               # Tipos TypeScript compartidos
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Main layout
+│   ├── page.tsx           # Home page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── ui/               # Reusable UI components
+│   ├── layout/           # Layout components (Header, Footer, etc.)
+│   └── forms/            # Form components
+├── lib/                  # Utilities and configurations
+│   ├── api/             # API client and endpoints
+│   └── utils/           # Utility functions
+├── types/               # Shared TypeScript types
 ├── hooks/               # Custom React Hooks
-├── public/              # Archivos estáticos
-└── .env.local          # Variables de entorno (no commitear)
+├── public/              # Static files
+└── .env.local          # Environment variables (do not commit)
 ```
 
-## 🛠️ Instalación
+## 🛠️ Installation
 
-### Prerequisitos
+### Prerequisites
 
 - Node.js 20.x LTS
 - npm 10.x
 
-### Pasos
+### Steps
 
-1. **Instalar dependencias**
+1. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. **Configurar variables de entorno**
+2. **Configure environment variables**
    ```bash
    cp .env.example .env.local
    ```
-   Editar `.env.local` con tus valores:
+   Edit `.env.local` with your values:
    ```env
    NEXT_PUBLIC_API_URL=http://localhost:8000
    ```
 
-3. **Ejecutar en modo desarrollo**
+3. **Run in development mode**
    ```bash
    npm run dev
    ```
-   La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
+   The application will be available at [http://localhost:3000](http://localhost:3000)
 
-## 📜 Scripts Disponibles
+## 📜 Available Scripts
 
 ```bash
-npm run dev      # Ejecuta el servidor de desarrollo
-npm run build    # Construye la aplicación para producción
-npm run start    # Inicia el servidor de producción
-npm run lint     # Ejecuta el linter
+npm run dev      # Run development server
+npm run build    # Build for production
+npm run start    # Start production server
+npm run lint     # Run linter
 ```
 
-## 🔌 Integración con Backend
+## 🔌 Backend Integration
 
-El frontend se comunica con el backend FastAPI mediante Axios.
+The frontend communicates with the FastAPI backend via Axios.
 
-- **URL Base**: Configurada en `NEXT_PUBLIC_API_URL`
-- **Cliente API**: `lib/api/client.ts`
+- **Base URL**: Configured in `NEXT_PUBLIC_API_URL`
+- **API Client**: `lib/api/client.ts`
 
-### Endpoints principales (ejemplo)
+### Main endpoints (example)
 
 ```typescript
 import apiClient from '@/lib/api/client';
 
-// Obtener rúbricas
+// Get rubrics
 const rubrics = await apiClient.get('/api/rubrics');
 
-// Evaluar repositorio
+// Evaluate repository
 const evaluation = await apiClient.post('/api/evaluate', {
   rubricId,
   repositoryUrl,
@@ -93,17 +93,17 @@ const evaluation = await apiClient.post('/api/evaluate', {
 });
 ```
 
-## 🎨 Estilos con Tailwind CSS
+## 🎨 Styling with Tailwind CSS
 
-Usa las clases de Tailwind directamente en los componentes:
+Use Tailwind classes directly in components:
 
 ```tsx
 <div className="bg-blue-500 text-white p-4 rounded-lg">
-  ¡Hola mundo!
+  Hello world!
 </div>
 ```
 
-Para estilos condicionales, usa la utilidad `cn`:
+For conditional styles, use the `cn` utility:
 
 ```tsx
 import { cn } from '@/lib/utils/cn';
@@ -113,20 +113,20 @@ import { cn } from '@/lib/utils/cn';
   isActive && 'active-styles',
   className
 )}>
-  Contenido
+  Content
 </div>
 ```
 
-## 📊 Uso de Recharts
+## 📊 Using Recharts
 
-Ejemplo de gráfico simple:
+Simple chart example:
 
 ```tsx
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const data = [
-  { name: 'Criterio 1', score: 80 },
-  { name: 'Criterio 2', score: 95 },
+  { name: 'Criteria 1', score: 80 },
+  { name: 'Criteria 2', score: 95 },
 ];
 
 <BarChart width={500} height={300} data={data}>
@@ -138,54 +138,54 @@ const data = [
 </BarChart>
 ```
 
-## 🔧 Desarrollo
+## 🔧 Development
 
-### Crear un nuevo componente
+### Create a new component
 
 ```bash
-# Componente UI
+# UI Component
 touch components/ui/Button.tsx
 
-# Componente de formulario
+# Form Component
 touch components/forms/EvaluationForm.tsx
 ```
 
-### Añadir tipos TypeScript
+### Add TypeScript types
 
-Edita `types/index.ts` para añadir nuevos tipos compartidos.
+Edit `types/index.ts` to add new shared types.
 
 ### Custom Hooks
 
-Crea hooks personalizados en la carpeta `hooks/`:
+Create custom hooks in the `hooks/` folder:
 
 ```typescript
 // hooks/useEvaluation.ts
 export function useEvaluation() {
-  // Tu lógica aquí
+  // Your logic here
 }
 ```
 
 ## 🐳 Docker
 
-El Dockerfile será creado y gestionado por el equipo de backend.
+The Dockerfile will be created and managed by the backend team.
 
-Configuración esperada:
-- **Puerto**: 3000
-- **Imagen base**: `node:20-slim`
+Expected configuration:
+- **Port**: 3000
+- **Base image**: `node:20-slim`
 
-## 📝 Notas
+## 📝 Notes
 
-- Las variables de entorno deben tener el prefijo `NEXT_PUBLIC_` para estar disponibles en el cliente
-- No commitear `.env.local` al repositorio (ya está en `.gitignore`)
-- Usar TypeScript para todos los componentes nuevos
+- Environment variables must have the `NEXT_PUBLIC_` prefix to be available in the client
+- Do not commit `.env.local` to the repository (already in `.gitignore`)
+- Use TypeScript for all new components
 
-## 🤝 Contribución
+## 🤝 Contributing
 
-1. Crear rama desde `develop`
-2. Hacer cambios
-3. Commitear siguiendo conventional commits
-4. Hacer pull request
+1. Create branch from `develop`
+2. Make changes
+3. Commit following conventional commits
+4. Create pull request
 
-## 📧 Contacto
+## 📧 Contact
 
-**Stakeholder**: David Robert - david.robert@gmail.com
+**Project Team**: ai-repo-evaluator@company.com
