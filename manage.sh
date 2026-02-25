@@ -14,8 +14,8 @@ COMPOSE_FILE="docker-compose.dev.yml"
 BACKUP_DIR="./backups"
 
 # Load Env Variables for Backup/Restore logic
-if [ -f .env ]; then
-  export $(grep -v '^#' backend/.env | xargs)
+if [ -f ./backend/.env ]; then
+  export $(grep -v '^#' ./backend/.env | xargs)
 fi
 
 mkdir -p $BACKUP_DIR
