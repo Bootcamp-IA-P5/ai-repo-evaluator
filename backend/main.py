@@ -5,6 +5,9 @@ from contextlib import asynccontextmanager
 
 from core.database import init_db, get_db
 from core.logging_config import setup_logging, logger
+from core.settings import settings
+from core.exception_handlers import register_exception_handlers
+from routers.rubrics import router as rubrics_router
 
 # 1. Setup Logging (with colorlog!)
 setup_logging()
@@ -21,14 +24,20 @@ async def lifespan(app: FastAPI):
 
 # 3. Initialize FastAPI
 app = FastAPI(
-    title="Evaluador RAG API",
-    description="Automated GitHub Repository Grading with RAG",
-    version="1.0.0",
+    title=settings.APP_TITLE,
+    description=settings.APP_DESCRIPTION,
+    version=settings.APP_VERSION,
     lifespan=lifespan
 )
 
-# 4. Basic Health Check Endpoint
-@app.get("/health", tags=["System"])
+# 4. Register Exception Handlers
+register_exception_handlers(app)
+
+# 5. Register API Routers
+app.include_router(rubrics_router, prefix=settings.API_V1_PREFIX)
+
+# 6. Basic Health Check Endpoint
+@app.get(settings.HEALTH_CHECK_PATH, tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     try:
         # Simple query to verify DB connection is alive
@@ -38,6 +47,6 @@ def health_check(db: Session = Depends(get_db)):
         logger.error(f"Health check failed: {e}")
         return {"status": "unhealthy", "database": "disconnected"}
 
-@app.get("/", tags=["System"])
+@app.get(settings.ROOT_PATH, tags=["System"])
 def root():
-    return {"message": "Welcome to the Evaluador RAG API. Navigate to /docs for Swagger."}  
+    return {"message": "Welcome to the Evaluador RAG API. Navigate to /docs for Swagger."}
