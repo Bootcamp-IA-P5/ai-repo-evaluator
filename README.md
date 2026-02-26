@@ -55,7 +55,15 @@ A full-stack application for evaluating repositories using AI-powered analysis. 
 - [Docker](https://docs.docker.com/get-docker/) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+) or Docker Compose V1 (`docker-compose`)
 
-> **Note:** The `manage.sh` script automatically detects whether you have `docker compose` (V2) or `docker-compose` (V1) installed.
+> **Note:** The management scripts automatically detect whether you have `docker compose` (V2) or `docker-compose` (V1) installed.
+
+### Platform-Specific Scripts
+
+| Platform | Script | Description |
+|----------|--------|-------------|
+| Linux/macOS | `manage.sh` | Bash script |
+| Windows (PowerShell) | `manage.ps1` | PowerShell script (recommended) |
+| Windows (CMD) | `manage.bat` | Batch file for older systems |
 
 ## 🚀 Quick Start
 
@@ -80,8 +88,19 @@ cp frontend/.env.template frontend/.env
 
 ### 3. Start All Services
 
+**Linux/macOS:**
 ```bash
 ./manage.sh all
+```
+
+**Windows (PowerShell):**
+```powershell
+.\manage.ps1 all
+```
+
+**Windows (Command Prompt):**
+```cmd
+manage.bat all
 ```
 
 ### 4. Access the Application
@@ -108,7 +127,9 @@ ai-repo-evaluator/
 │   └── ...                   # Application code
 ├── backups/                  # Database backup storage
 ├── docker-compose.dev.yml    # Docker Compose configuration
-├── manage.sh                 # Development management script
+├── manage.sh                 # Development management script (Linux/macOS)
+├── manage.ps1                # Development management script (Windows PowerShell)
+├── manage.bat                # Development management script (Windows CMD)
 ├── requirements.txt          # Root requirements (references backend)
 └── README.md                 # This file
 ```

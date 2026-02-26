@@ -10,7 +10,7 @@ RUN npm install
 
 # Copy the rest of the code is handled by volumes in compose
 # for hot-reloading, but we expose the Vite port
-EXPOSE 5173
+EXPOSE 3000
 
 # Run Vite in dev mode with network access
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
