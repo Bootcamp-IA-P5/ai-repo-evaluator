@@ -24,6 +24,8 @@ import {
   Alert,
   Modal,
   ConfirmModal,
+  DropdownMenu,
+  Textarea,
 } from '@/components/ui';
 import { Container, PageHeader } from '@/components/layout';
 import {
@@ -33,6 +35,12 @@ import {
   FileText,
   TrendingUp,
   Award,
+  MoreVertical,
+  Pencil,
+  Copy,
+  Trash2,
+  Eye,
+  Download,
 } from 'lucide-react';
 
 /**
@@ -45,6 +53,8 @@ export default function ComponentsDemo() {
   const [showModal, setShowModal] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lastDropdownAction, setLastDropdownAction] = useState<string | null>(null);
+  const [textareaValue, setTextareaValue] = useState('');
 
   const handleFakeDelete = () => {
     setIsDeleting(true);
@@ -447,6 +457,135 @@ export default function ComponentsDemo() {
           confirmVariant="danger"
           isLoading={isDeleting}
         />
+      </Container>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Dropdown Menu Section                                               */}
+      {/* ------------------------------------------------------------------ */}
+      <Container className="py-10">
+        <PageHeader
+          title="Dropdown Menu"
+          description="Contextual action menus triggered by any element. Supports groups, dividers, icons, and destructive items."
+        />
+
+        <div className="mt-8 space-y-10">
+          {/* Last action feedback */}
+          {lastDropdownAction && (
+            <p className="text-sm text-gray-500">
+              Last action: <span className="font-semibold text-gray-800">{lastDropdownAction}</span>
+            </p>
+          )}
+
+          {/* Variant: three-dot menu (typical rubric / table row) */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">Three-dot menu (right-aligned)</h3>
+            <div className="flex items-center gap-4">
+              <DropdownMenu
+                align="right"
+                trigger={
+                  <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                    <MoreVertical className="w-5 h-5 text-gray-500" />
+                  </button>
+                }
+                groups={[
+                  {
+                    items: [
+                      { key: 'view',      label: 'View details',    icon: <Eye    className="w-4 h-4" />, onClick: () => setLastDropdownAction('View details') },
+                      { key: 'edit',      label: 'Edit rubric',     icon: <Pencil className="w-4 h-4" />, onClick: () => setLastDropdownAction('Edit rubric') },
+                      { key: 'duplicate', label: 'Duplicate',       icon: <Copy   className="w-4 h-4" />, onClick: () => setLastDropdownAction('Duplicate') },
+                      { key: 'download',  label: 'Export as PDF',   icon: <Download className="w-4 h-4" />, onClick: () => setLastDropdownAction('Export as PDF') },
+                    ],
+                  },
+                  {
+                    items: [
+                      { key: 'delete', label: 'Delete rubric', icon: <Trash2 className="w-4 h-4" />, destructive: true, onClick: () => setLastDropdownAction('Delete rubric') },
+                    ],
+                  },
+                ]}
+              />
+              <span className="text-sm text-gray-500">Click the ⋮ button</span>
+            </div>
+          </div>
+
+          {/* Variant: left-aligned with group labels */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700">Left-aligned with group labels</h3>
+            <DropdownMenu
+              align="left"
+              trigger={
+                <Button variant="outline">Actions <MoreVertical className="w-4 h-4 ml-1" /></Button>
+              }
+              groups={[
+                {
+                  label: 'Evaluation',
+                  items: [
+                    { key: 'run',    label: 'Run evaluation',  icon: <Plus  className="w-4 h-4" />, onClick: () => setLastDropdownAction('Run evaluation') },
+                    { key: 'report', label: 'View report',     icon: <Eye   className="w-4 h-4" />, onClick: () => setLastDropdownAction('View report') },
+                  ],
+                },
+                {
+                  label: 'Manage',
+                  items: [
+                    { key: 'edit',    label: 'Edit',    icon: <Pencil className="w-4 h-4" />, onClick: () => setLastDropdownAction('Edit') },
+                    { key: 'archive', label: 'Archive (soon)', icon: <Download className="w-4 h-4" />, disabled: true },
+                    { key: 'delete',  label: 'Delete',  icon: <Trash2 className="w-4 h-4" />, destructive: true, onClick: () => setLastDropdownAction('Delete') },
+                  ],
+                },
+              ]}
+            />
+          </div>
+        </div>
+      </Container>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Textarea Section                                                    */}
+      {/* ------------------------------------------------------------------ */}
+      <Container className="py-10 mb-16">
+        <PageHeader
+          title="Textarea"
+          description="Multi-line text input with the same API as Input: label, error, helper text, auto-resize."
+        />
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Basic */}
+          <Textarea
+            label="Criteria description"
+            placeholder="Describe what this criterion evaluates in the repository..."
+            helperText="Markdown is supported"
+            rows={4}
+            fullWidth
+          />
+
+          {/* With error */}
+          <Textarea
+            label="Justification (required)"
+            error="This field is required"
+            placeholder="Explain your evaluation..."
+            rows={4}
+            fullWidth
+          />
+
+          {/* Disabled */}
+          <Textarea
+            label="System notes (read-only)"
+            defaultValue="Automatically generated evaluation notes will appear here after the pipeline runs."
+            disabled
+            rows={3}
+            fullWidth
+          />
+
+          {/* Auto-resize */}
+          <Textarea
+            label="Notes (auto-resize, max 8 rows)"
+            placeholder="Start typing — the field grows with the content..."
+            autoResize
+            maxRows={8}
+            helperText="Grows automatically up to 8 rows"
+            fullWidth
+            value={textareaValue}
+            onChange={(e) => setTextareaValue(e.target.value)}
+          />
+        </div>
       </Container>
     </div>
   );

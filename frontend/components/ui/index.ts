@@ -49,3 +49,9 @@ export type { AlertProps, AlertVariant } from './Alert';
 
 export { Modal, ConfirmModal } from './Modal';
 export type { ModalProps, ModalSize, ConfirmModalProps } from './Modal';
+
+export { DropdownMenu } from './DropdownMenu';
+export type { DropdownMenuProps, DropdownMenuItem, DropdownMenuGroup } from './DropdownMenu';
+
+export { Textarea } from './Textarea';
+export type { TextareaProps } from './Textarea';
