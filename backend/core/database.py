@@ -20,9 +20,6 @@ SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:
 # Create the Engine
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-# Create the Engine
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-
 # SessionLocal will be used to create a new session for each request
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
