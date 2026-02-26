@@ -6,10 +6,14 @@
 	"image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "20"
+		}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	"forwardPorts": [3000, 8000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "pip3 install --user -r requirements.txt",
@@ -18,6 +22,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				// Python extensions
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"tal7aouy.indent-colorizer",
@@ -27,7 +32,11 @@
 				"njpwerner.autodocstring",
 				"google.geminicodeassist",
 				"daelonsuzuka.nicegui",
-				"saoudrizwan.claude-dev"
+				"saoudrizwan.claude-dev",
+				// Frontend/TypeScript extensions
+				"dbaeumer.vscode-eslint",
+				"bradlc.vscode-tailwindcss",
+				"esbenp.prettier-vscode"
 			]
 		}
 	},
