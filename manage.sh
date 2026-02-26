@@ -64,7 +64,40 @@ case "$1" in
   logs)
     $DOCKER_CMD -f $COMPOSE_FILE logs -f
     ;;
+  push)
+    REPO=${2:-osrogon}
+    if [ -z "$2" ]; then
+      read -p "📦 No repository specified. Use default 'osrogon'? [y/N]: " CONFIRM
+      if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
+        echo "❌ Cancelled. Usage: $0 push [repository]"
+        exit 1
+      fi
+    fi
+    
+    echo "🔨 Building and pushing multi-arch images (AMD64 + ARM64) to $REPO..."
+    
+    # Ensure buildx is available
+    docker buildx create --use --name multiarch_builder 2>/dev/null || docker buildx use multiarch_builder
+    
+    # Backend
+    echo "📦 Building and pushing backend image..."
+    docker buildx build --platform linux/amd64,linux/arm64 \
+        -t $REPO/ai-repo-evaluator-backend:latest \
+        -f backend/Dockerfile.prod \
+        --push backend
+    
+    # Frontend
+    echo "📦 Building and pushing frontend image..."
+    docker buildx build --platform linux/amd64,linux/arm64 \
+        -t $REPO/ai-repo-evaluator-frontend:latest \
+        -f frontend/Dockerfile.prod \
+        --push frontend
+    
+    echo "✅ Images pushed to Docker Hub: $REPO"
+    echo "   - $REPO/ai-repo-evaluator-backend:latest"
+    echo "   - $REPO/ai-repo-evaluator-frontend:latest"
+    ;;
   *)
-    echo "Usage: $0 {db|backend|all|rebuild|stop|backup|restore|logs}"
+    echo "Usage: $0 {db|backend|all|rebuild|stop|backup|restore|logs|push [repo]}"
     exit 1
 esac

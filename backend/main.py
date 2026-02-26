@@ -37,6 +37,8 @@ register_exception_handlers(app)
 app.include_router(rubrics_router, prefix=settings.API_V1_PREFIX)
 
 # 6. Basic Health Check Endpoint
+from fastapi import HTTPException
+
 @app.get(settings.HEALTH_CHECK_PATH, tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     try:
@@ -45,7 +47,7 @@ def health_check(db: Session = Depends(get_db)):
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return {"status": "unhealthy", "database": "disconnected"}
+        raise HTTPException(status_code=503, detail={"status": "unhealthy", "database": "disconnected", "error": str(e)})
 
 @app.get(settings.ROOT_PATH, tags=["System"])
 def root():
