@@ -21,6 +21,7 @@ import {
   TableCell,
   SearchBar,
   StatCard,
+  Alert,
 } from '@/components/ui';
 import { Container, PageHeader } from '@/components/layout';
 import {
@@ -191,6 +192,48 @@ export default function ComponentsDemo() {
                 <Badge variant="info" size="lg">
                   Large
                 </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Alerts Section */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Alerts</h2>
+          <Card>
+            <CardContent>
+              <div className="space-y-4 max-w-2xl">
+                <Alert
+                  variant="success"
+                  title="Evaluation completed"
+                  message="The repository was successfully evaluated with a score of 92/100."
+                />
+                <Alert
+                  variant="error"
+                  title="Evaluation failed"
+                  message="Could not reach the repository. Please check the URL and try again."
+                  dismissible
+                />
+                <Alert
+                  variant="warning"
+                  message="This rubric has not been updated in over 6 months. Consider reviewing it."
+                  dismissible
+                />
+                <Alert
+                  variant="info"
+                  message="Your API key will expire in 3 days. Renew it to avoid interruptions."
+                  action={
+                    <button className="text-sm font-medium text-blue-700 underline hover:text-blue-800">
+                      Renew API key
+                    </button>
+                  }
+                />
+                <Alert
+                  variant="success"
+                  icon={false}
+                  message="Changes saved. No icon variant."
+                  dismissible
+                />
               </div>
             </CardContent>
           </Card>

@@ -43,3 +43,6 @@ export type { SearchBarProps } from './SearchBar';
 
 export { StatCard, MetricCard } from './StatCard';
 export type { StatCardProps, MetricCardProps } from './StatCard';
+
+export { Alert } from './Alert';
+export type { AlertProps, AlertVariant } from './Alert';
