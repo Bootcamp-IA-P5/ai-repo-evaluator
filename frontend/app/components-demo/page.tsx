@@ -22,6 +22,8 @@ import {
   SearchBar,
   StatCard,
   Alert,
+  Modal,
+  ConfirmModal,
 } from '@/components/ui';
 import { Container, PageHeader } from '@/components/layout';
 import {
@@ -40,6 +42,18 @@ export default function ComponentsDemo() {
   const [selectedRubric, setSelectedRubric] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleFakeDelete = () => {
+    setIsDeleting(true);
+    // Simulates an async API call
+    setTimeout(() => {
+      setIsDeleting(false);
+      setShowConfirm(false);
+    }, 1500);
+  };
 
   const rubricOptions = [
     {
@@ -379,6 +393,60 @@ export default function ComponentsDemo() {
             </Table>
           </Card>
         </section>
+
+        {/* Modal Section */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Modal / Dialog</h2>
+          <Card>
+            <CardContent>
+              <div className="flex flex-wrap gap-4">
+                {/* General purpose modal */}
+                <Button variant="outline" onClick={() => setShowModal(true)}>
+                  Open modal
+                </Button>
+
+                {/* Confirmation / destructive action modal */}
+                <Button variant="danger" onClick={() => setShowConfirm(true)}>
+                  Delete rubric
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* General purpose modal */}
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Edit rubric"
+          description="Update the name and criteria of this rubric."
+          size="lg"
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={() => setShowModal(false)}>Save changes</Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <Input label="Rubric name" defaultValue="Full-Stack Web App" fullWidth />
+            <Input label="Description" defaultValue="Comprehensive evaluation for full-stack applications" fullWidth />
+          </div>
+        </Modal>
+
+        {/* Confirmation modal */}
+        <ConfirmModal
+          isOpen={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={handleFakeDelete}
+          title="Delete rubric"
+          description="This action cannot be undone."
+          message='Are you sure you want to delete "Full-Stack Web App"? All evaluations using this rubric will be affected.'
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          confirmVariant="danger"
+          isLoading={isDeleting}
+        />
       </Container>
     </div>
   );

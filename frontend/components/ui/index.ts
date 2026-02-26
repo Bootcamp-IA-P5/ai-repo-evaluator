@@ -46,3 +46,6 @@ export type { StatCardProps, MetricCardProps } from './StatCard';
 
 export { Alert } from './Alert';
 export type { AlertProps, AlertVariant } from './Alert';
+
+export { Modal, ConfirmModal } from './Modal';
+export type { ModalProps, ModalSize, ConfirmModalProps } from './Modal';
