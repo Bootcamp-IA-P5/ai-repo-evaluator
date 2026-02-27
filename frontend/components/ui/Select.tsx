@@ -171,7 +171,7 @@ export const Select: React.FC<SelectProps> = ({
                       )}
                     </div>
                     {isSelected && (
-                      <Check className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                     )}
                   </button>
                 );

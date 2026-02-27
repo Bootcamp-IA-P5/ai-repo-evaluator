@@ -63,7 +63,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <p className="mt-2 text-base text-gray-600">{description}</p>
           )}
         </div>
-        {action && <div className="flex-shrink-0">{action}</div>}
+        {action && <div className="shrink-0">{action}</div>}
       </div>
     </div>
   );
