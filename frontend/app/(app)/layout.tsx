@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { LayoutDashboard, FilePlus2, BookOpen, History } from 'lucide-react';
 import { Sidebar } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
@@ -34,12 +34,17 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
     <MainLayout
+      onMenuClick={() => setMobileOpen(true)}
       sidebar={
         <Sidebar
           title="AI Repository Evaluator"
           items={NAV_ITEMS}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
         />
       }
     >
