@@ -9,7 +9,7 @@ def setup_logging():
     # Define the color scheme and format
     # log_color specifies the color of the level name and message
     formatter = ColoredFormatter(
-        "%(log_color)s%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        "%(log_color)s%(asctime)s [%(levelname)s] %(name)s [%(module)s.%(funcName)s]: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         reset=True,
         log_colors={

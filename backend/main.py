@@ -8,6 +8,7 @@ from core.logging_config import setup_logging, logger
 from core.settings import settings
 from core.exception_handlers import register_exception_handlers
 from routers.rubrics import router as rubrics_router
+from routers.evaluations import router as evaluations_router
 
 # 1. Setup Logging (with colorlog!)
 setup_logging()
@@ -16,11 +17,11 @@ setup_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup Logic
-    logger.info("🚀 Starting Evaluator RAG Backend...")
+    logger.debug("🚀 Starting Evaluator RAG Backend...")
     init_db() 
     yield
     # Shutdown Logic
-    logger.info("🛑 Shutting down Evaluator RAG Backend...")
+    logger.debug("🛑 Shutting down Evaluator RAG Backend...")
 
 # 3. Initialize FastAPI
 app = FastAPI(
@@ -35,6 +36,7 @@ register_exception_handlers(app)
 
 # 5. Register API Routers
 app.include_router(rubrics_router, prefix=settings.API_V1_PREFIX)
+app.include_router(evaluations_router, prefix=settings.API_V1_PREFIX)
 
 # 6. Basic Health Check Endpoint
 @app.get(settings.HEALTH_CHECK_PATH, tags=["System"])
