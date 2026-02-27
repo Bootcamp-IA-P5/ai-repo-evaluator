@@ -699,7 +699,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
           <div className="space-y-4">
             {rubric.criteria.map((criterion, index) => (
               <CriterionCard
-            key={criterion._id}
+                key={criterion._id}
                 criterion={criterion}
                 useScores={rubric.useScores}
                 isOnly={rubric.criteria.length === 1}

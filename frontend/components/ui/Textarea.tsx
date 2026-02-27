@@ -72,25 +72,36 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const textareaId = id || `textarea-${generatedId}`;
     const hasError = Boolean(error);
 
-    // Internal ref for auto-resize — merged with the forwarded ref
-    const innerRef = React.useRef<HTMLTextAreaElement>(null);
-    const resolvedRef = (ref as React.RefObject<HTMLTextAreaElement>) || innerRef;
+    // Internal ref for auto-resize
+    const innerRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+    // Merged ref: supports both callback refs and object refs forwarded from the parent
+    const resolvedRef = React.useMemo(() => {
+      return (instance: HTMLTextAreaElement | null) => {
+        innerRef.current = instance;
+        if (typeof ref === 'function') {
+          ref(instance);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = instance;
+        }
+      };
+    }, [ref]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      if (autoResize && resolvedRef.current) {
+      if (autoResize && innerRef.current) {
         // Reset height first so shrinking works correctly
-        resolvedRef.current.style.height = 'auto';
+        innerRef.current.style.height = 'auto';
 
         const lineHeight = parseInt(
-          window.getComputedStyle(resolvedRef.current).lineHeight || '24',
+          window.getComputedStyle(innerRef.current).lineHeight || '24',
           10
         );
         const maxHeight = maxRows ? lineHeight * maxRows : Infinity;
-        const newHeight = Math.min(resolvedRef.current.scrollHeight, maxHeight);
+        const newHeight = Math.min(innerRef.current.scrollHeight, maxHeight);
 
-        resolvedRef.current.style.height = `${newHeight}px`;
-        resolvedRef.current.style.overflowY =
-          maxRows && resolvedRef.current.scrollHeight > maxHeight
+        innerRef.current.style.height = `${newHeight}px`;
+        innerRef.current.style.overflowY =
+          maxRows && innerRef.current.scrollHeight > maxHeight
             ? 'auto'
             : 'hidden';
       }
