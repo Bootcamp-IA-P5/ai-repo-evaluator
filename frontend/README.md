@@ -15,22 +15,80 @@ Frontend for the AI-powered repository evaluation assistant for the AI bootcamp.
 
 ```
 frontend/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx         # Main layout
-│   ├── page.tsx           # Home page
-│   └── globals.css        # Global styles
-├── components/            # React components
-│   ├── ui/               # Reusable UI components
-│   ├── layout/           # Layout components (Header, Footer, etc.)
-│   └── forms/            # Form components
-├── lib/                  # Utilities and configurations
-│   ├── api/             # API client and endpoints
-│   └── utils/           # Utility functions
-├── types/               # Shared TypeScript types
-├── hooks/               # Custom React Hooks
-├── public/              # Static files
-└── .env.local          # Environment variables (do not commit)
+├── app/                     # Next.js App Router
+│   ├── layout.tsx          # Main layout
+│   ├── page.tsx            # Home page
+│   ├── components-demo/    # UI components showcase
+│   └── globals.css         # Global styles
+├── components/             # React components
+│   ├── ui/                # Reusable UI components (Button, Input, Select, etc.)
+│   ├── layout/            # Layout components (Sidebar, Container, etc.)
+│   └── forms/             # Form components
+├── lib/                   # Utilities and configurations
+│   ├── api/              # API client and endpoints
+│   └── utils/            # Utility functions
+├── types/                # Shared TypeScript types
+├── hooks/                # Custom React Hooks
+├── public/               # Static files
+└── .env.local           # Environment variables (do not commit)
 ```
+
+## 🎨 UI Components Library
+
+A comprehensive set of reusable UI components built with React, TypeScript, and Tailwind CSS.
+
+### Available Components
+
+#### Basic Components
+- **Button** - Multiple variants (primary, secondary, outline, ghost, danger), sizes, and loading states
+- **Input** - Text input with validation, icons, and helper text
+- **Select** - Custom dropdown with Classroom-style design and search functionality
+- **Badge** - Status indicators with color variants and optional dot
+- **Card** - Flexible container with header, content, and footer sections
+- **FileUpload** - Drag-and-drop file upload with validation
+- **Table** - Composable table with header, body, and footer
+- **SearchBar** - Search input with debouncing and clear functionality
+- **StatCard** - Metric display card with optional trend indicators
+
+#### Layout Components
+- **Sidebar** - Navigation sidebar with active state highlighting
+- **Container** - Content container with max-width control
+- **PageHeader** - Page title and description component
+- **MainLayout** - Main application layout structure
+
+### Usage Example
+
+```tsx
+import { Button, Input, Select, Card, Badge } from '@/components/ui';
+import { Sidebar, Container, PageHeader } from '@/components/layout';
+import { Plus } from 'lucide-react';
+
+// Button with icon
+<Button variant="primary" leftIcon={<Plus />}>
+  Create New
+</Button>
+
+// Input with validation
+<Input
+  label="Repository URL"
+  placeholder="https://github.com/user/repo"
+  error="Invalid URL"
+  fullWidth
+/>
+
+// Custom Select with search
+<Select
+  label="Select Rubric"
+  options={rubricOptions}
+  value={selected}
+  onChange={setSelected}
+  fullWidth
+/>
+```
+
+For complete documentation and examples, see:
+- **[UI Components Documentation](./components/UI_COMPONENTS.md)** - Comprehensive component guide
+- **[Components Demo](/components-demo)** - Live interactive showcase (run dev server)
 
 ## 🛠️ Installation
 
