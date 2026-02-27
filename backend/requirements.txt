@@ -10,18 +10,20 @@ alembic==1.13.1
 
 # AI & RAG (Core for Dev B)
 GitPython ==3.1.43
-langchain==0.1.9
-langchain-community==0.0.24
-langchain-openai==0.0.8
+langchain==1.2.10
+langchain-community==0.4.1
+langchain-core==1.2.16
+langchain-openai==1.1.10
+langchain-text-splitters==1.1.1
 faiss-cpu==1.7.4
 pypdf==4.0.1
-tiktoken==0.6.0
+tiktoken==0.12.0
 
 # Environment & Utils
 colorlog==6.8.2
 python-dotenv==1.0.1
-requests==2.31.0
-pydantic-settings==2.1.0
+requests==2.32.5
+pydantic-settings==2.13.1
 
 # Testing
 pytest==8.0.0

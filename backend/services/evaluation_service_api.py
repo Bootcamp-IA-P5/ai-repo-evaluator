@@ -1,0 +1,286 @@
+"""
+Evaluation Service API - Business logic for Evaluation operations.
+
+This module provides the service layer for Evaluation CRUD operations,
+including the background task for long-running AI evaluation processing.
+"""
+
+import json
+from typing import List
+from sqlalchemy.orm import Session
+from fastapi import BackgroundTasks
+
+from models import Evaluation, Rubric
+from schemas.response import APIResponse
+from schemas.evaluation import EvaluationResponse, EvaluationResponseWithFindings, FindingResponse
+from services.pdf_processor import BriefingProcessor
+from core.logging_config import logger
+from core.messages import Messages
+from core.database import SessionLocal
+from core.settings import settings
+
+
+class EvaluationServiceAPI:
+    """
+    Service class for Evaluation API operations.
+
+    This class encapsulates all business logic related to evaluation management,
+    providing a clean interface for CRUD operations with standardized responses.
+    """
+
+    def create(
+        self,
+        db: Session,
+        evaluation_request,
+        background_tasks: BackgroundTasks,
+        db_url: str,
+    ) -> APIResponse[EvaluationResponse]:
+        """
+        Create a new evaluation with processed briefing.
+
+        Validates the rubric exists, processes the briefing PDF, creates
+        the evaluation record, and queues the background processing task.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_request: The evaluation data to create
+            background_tasks: FastAPI BackgroundTasks for async processing
+            db_url: Database URL for background task session
+
+        Returns:
+            APIResponse containing the created evaluation with status 'pending',
+            or error information if validation fails.
+        """
+        try:
+            # 1. Validate rubric exists
+            rubric = db.query(Rubric).filter(Rubric.id == evaluation_request.rubric_id).first()
+            if rubric is None:
+                logger.warning(
+                    Messages.Rubric.NOT_FOUND_DETAIL.format(id=evaluation_request.rubric_id)
+                )
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Rubric.NOT_FOUND_DETAIL.format(id=evaluation_request.rubric_id)],
+                    message=Messages.Rubric.NOT_FOUND,
+                )
+
+            # 2. Process briefing PDF
+            try:
+                briefing_processor = BriefingProcessor(evaluation_request.briefing_path)
+                briefing_chunks = briefing_processor.process()
+                briefing_snapshot = json.dumps(briefing_chunks)
+                logger.debug(f"Processed briefing into {len(briefing_chunks)} chunks")
+            except FileNotFoundError:
+                logger.warning(f"Briefing file not found: {evaluation_request.briefing_path}")
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[f"Briefing file not found: {evaluation_request.briefing_path}"],
+                    message="Failed to process briefing",
+                )
+            except Exception as e:
+                logger.error(f"Failed to process briefing: {e}")
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[f"Failed to process briefing: {str(e)}"],
+                    message="Failed to process briefing",
+                )
+
+            # 3. Create evaluation record with status 'pending'
+            evaluation = Evaluation(
+                rubric_id=evaluation_request.rubric_id,
+                repo_url=evaluation_request.repo_url,
+                briefing_snapshot=briefing_snapshot,
+                status=settings.EVALUATION_STATUS_PENDING,
+            )
+
+            db.add(evaluation)
+            db.commit()
+            db.refresh(evaluation)
+
+            evaluation_response = EvaluationResponse.model_validate(evaluation)
+
+            logger.debug(f"Created evaluation {evaluation.id} with status '{settings.EVALUATION_STATUS_PENDING}'")
+
+            # 4. Queue background task for AI processing
+            background_tasks.add_task(
+                run_evaluation_task,
+                evaluation_id=evaluation.id,
+                db_url=db_url,
+            )
+
+            return APIResponse(
+                success=True,
+                data=evaluation_response,
+                errors=None,
+                message=Messages.Evaluation.CREATED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to create evaluation: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Evaluation.CREATE_FAILED,
+            )
+
+    def get_by_id(
+        self, db: Session, evaluation_id: int
+    ) -> APIResponse[EvaluationResponseWithFindings]:
+        """
+        Retrieve a single evaluation by ID with its findings.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the evaluation to retrieve
+
+        Returns:
+            APIResponse containing the evaluation with nested findings,
+            or error information if not found.
+        """
+        try:
+            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+
+            if evaluation is None:
+                logger.warning(Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id)],
+                    message=Messages.Evaluation.NOT_FOUND,
+                )
+
+            evaluation_response = EvaluationResponseWithFindings.model_validate(evaluation)
+
+            logger.debug(f"Retrieved evaluation {evaluation_id}")
+
+            return APIResponse(
+                success=True,
+                data=evaluation_response,
+                errors=None,
+                message=Messages.Evaluation.RETRIEVED,
+            )
+        except Exception as e:
+            logger.error(f"Failed to retrieve evaluation {evaluation_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Evaluation.RETRIEVE_FAILED,
+            )
+
+    def get_all(self, db: Session) -> APIResponse[List[EvaluationResponse]]:
+        """
+        Retrieve all evaluations from the database.
+
+        Args:
+            db: SQLAlchemy database session
+
+        Returns:
+            APIResponse containing a list of evaluations on success,
+            or error information on failure.
+        """
+        try:
+            evaluations = db.query(Evaluation).all()
+
+            evaluation_responses = [
+                EvaluationResponse.model_validate(evaluation) for evaluation in evaluations
+            ]
+
+            logger.debug(f"Retrieved {len(evaluation_responses)} evaluations")
+
+            return APIResponse(
+                success=True,
+                data=evaluation_responses,
+                errors=None,
+                message=Messages.Evaluation.LIST_RETRIEVED,
+            )
+        except Exception as e:
+            logger.error(f"Failed to retrieve evaluations: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Evaluation.LIST_RETRIEVE_FAILED,
+            )
+
+
+# =============================================================================
+# BACKGROUND TASK
+# =============================================================================
+
+
+def run_evaluation_task(evaluation_id: int, db_url: str):
+    """
+    Background task for running the AI evaluation process.
+
+    This task is triggered after the evaluation record is created and
+    performs the long-running AI analysis. It manages the evaluation
+    lifecycle: pending → processing → completed/failed.
+
+    Args:
+        evaluation_id: The ID of the evaluation to process
+        db_url: Database URL for creating a new session
+    """
+    # Create a new database session for the background task
+    db = SessionLocal()
+
+    try:
+        logger.debug(f"Starting background evaluation task for evaluation {evaluation_id}")
+
+        # 1. Update status to 'processing'
+        evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+        if evaluation is None:
+            logger.error(f"Evaluation {evaluation_id} not found in background task")
+            return
+
+        evaluation.status = settings.EVALUATION_STATUS_PROCESSING
+        db.commit()
+        logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
+
+        # 2. [HOOK] AI Integration Point
+        # This is where Developer B's RAG logic will be implemented.
+        # The briefing_snapshot is available as:
+        #   briefing_chunks = json.loads(evaluation.briefing_snapshot)
+        #
+        # Expected outputs:
+        #   - Create Finding records for each criterion
+        #   - Calculate total_score
+        #   - Generate ai_summary
+        #
+        # Example placeholder implementation:
+        #   findings = ai_engine.evaluate(
+        #       repo_url=evaluation.repo_url,
+        #       briefing=evaluation.briefing_snapshot,
+        #       rubric_id=evaluation.rubric_id
+        #   )
+
+        # TODO: Implement AI evaluation logic here (Developer B's task)
+        # For now, we'll simulate a successful completion
+
+        # 3. Update status to 'completed'
+        evaluation.status = settings.EVALUATION_STATUS_COMPLETED
+        evaluation.total_score = 0.0  # Placeholder
+        evaluation.ai_summary = Messages.Evaluation.AI_SUMMARY_PENDING
+        db.commit()
+
+        logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_COMPLETED}'")
+
+    except Exception as e:
+        # 4. On failure, update status to 'failed'
+        logger.error(f"Evaluation {evaluation_id} failed: {e}")
+
+        try:
+            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+            if evaluation:
+                evaluation.status = settings.EVALUATION_STATUS_FAILED
+                evaluation.ai_summary = Messages.Evaluation.AI_SUMMARY_FAILED.format(error=str(e))
+                db.commit()
+        except Exception as commit_error:
+            logger.error(f"Failed to update evaluation status to '{settings.EVALUATION_STATUS_FAILED}': {commit_error}")
+
+    finally:
+        db.close()

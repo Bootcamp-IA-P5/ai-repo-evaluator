@@ -28,9 +28,19 @@ class Settings(BaseSettings):
     RUBRICS_ROUTE_PREFIX: str = "/rubrics"
     RUBRICS_TAG: str = "Rubrics"
 
+    # Route Configuration - Evaluations
+    EVALUATIONS_ROUTE_PREFIX: str = "/evaluations"
+    EVALUATIONS_TAG: str = "Evaluations"
+
     # Route Configuration - System
     HEALTH_CHECK_PATH: str = "/health"
     ROOT_PATH: str = "/"
+
+    # Evaluation Status Constants
+    EVALUATION_STATUS_PENDING: str = "pending"
+    EVALUATION_STATUS_PROCESSING: str = "processing"
+    EVALUATION_STATUS_COMPLETED: str = "completed"
+    EVALUATION_STATUS_FAILED: str = "failed"
 
     class Config:
         env_file = ".env"

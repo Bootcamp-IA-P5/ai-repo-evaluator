@@ -114,7 +114,7 @@ class RubricResponseWithCriteria(BaseModel):
 
 
 # =============================================================================
-# REQUEST SCHEMAS (For future POST/PUT operations)
+# REQUEST SCHEMAS (For POST/PUT operations)
 # =============================================================================
 
 
@@ -125,6 +125,18 @@ class LevelRequest(BaseModel):
     level_description: Optional[str] = None
     score_points: float
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "level_title": "Excellent",
+                    "level_description": "Comprehensive error handling with logging and custom exceptions",
+                    "score_points": 4.0,
+                }
+            ]
+        }
+    }
+
 
 class CriterionRequest(BaseModel):
     """Request schema for creating a new Criterion."""
@@ -134,6 +146,35 @@ class CriterionRequest(BaseModel):
     weight: float = 1.0
     levels: List[LevelRequest] = []
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "title": "Error Handling",
+                    "description": "Evaluates the completeness and quality of error handling",
+                    "weight": 1.0,
+                    "levels": [
+                        {
+                            "level_title": "Excellent",
+                            "level_description": "Comprehensive error handling with logging",
+                            "score_points": 4.0,
+                        },
+                        {
+                            "level_title": "Satisfactory",
+                            "level_description": "Basic error handling present",
+                            "score_points": 3.0,
+                        },
+                        {
+                            "level_title": "Insufficient",
+                            "level_description": "Minimal or no error handling",
+                            "score_points": 1.0,
+                        },
+                    ],
+                }
+            ]
+        }
+    }
+
 
 class RubricRequest(BaseModel):
     """Request schema for creating a new Rubric with nested criteria and levels."""
@@ -141,3 +182,60 @@ class RubricRequest(BaseModel):
     title: str
     description: Optional[str] = None
     criteria: List[CriterionRequest] = []
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "title": "Python Backend Project",
+                    "description": "Evaluates backend architecture, code quality, and best practices",
+                    "criteria": [
+                        {
+                            "title": "Error Handling",
+                            "description": "Evaluates the completeness of error handling",
+                            "weight": 1.0,
+                            "levels": [
+                                {
+                                    "level_title": "Excellent",
+                                    "level_description": "Comprehensive error handling with logging",
+                                    "score_points": 4.0,
+                                },
+                                {
+                                    "level_title": "Satisfactory",
+                                    "level_description": "Basic error handling present",
+                                    "score_points": 3.0,
+                                },
+                                {
+                                    "level_title": "Insufficient",
+                                    "level_description": "Minimal or no error handling",
+                                    "score_points": 1.0,
+                                },
+                            ],
+                        },
+                        {
+                            "title": "Code Quality",
+                            "description": "Evaluates code organization and readability",
+                            "weight": 1.5,
+                            "levels": [
+                                {
+                                    "level_title": "Excellent",
+                                    "level_description": "Clean, well-documented code following PEP 8",
+                                    "score_points": 4.0,
+                                },
+                                {
+                                    "level_title": "Satisfactory",
+                                    "level_description": "Readable code with minor style issues",
+                                    "score_points": 3.0,
+                                },
+                                {
+                                    "level_title": "Insufficient",
+                                    "level_description": "Poorly organized or undocumented code",
+                                    "score_points": 1.0,
+                                },
+                            ],
+                        },
+                    ],
+                }
+            ]
+        }
+    }
