@@ -88,8 +88,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   return (
     <div className={cn('flex h-screen bg-gray-50', className)}>
       {sidebar}
-      <main className="flex-1 overflow-y-auto">
-        <div className="flex flex-col items-center p-8 min-h-full">{children}</div>
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="p-8">{children}</div>
       </main>
     </div>
   );
