@@ -165,7 +165,7 @@ export default function NewEvaluationPage() {
     form.model !== '';
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl">
       <PageHeader
         title="New Evaluation"
         description="Configure and run an AI-powered repository evaluation"
