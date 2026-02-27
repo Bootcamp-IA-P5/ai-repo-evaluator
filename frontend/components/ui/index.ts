@@ -55,3 +55,11 @@ export type { DropdownMenuProps, DropdownMenuItem, DropdownMenuGroup } from './D
 
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
+
+export { RubricBuilder } from './RubricBuilder';
+export type {
+  RubricBuilderProps,
+  RubricData,
+  RubricCriterion,
+  RubricLevel,
+} from './RubricBuilder';

@@ -26,6 +26,7 @@ import {
   ConfirmModal,
   DropdownMenu,
   Textarea,
+  RubricBuilder,
 } from '@/components/ui';
 import { Container, PageHeader } from '@/components/layout';
 import {
@@ -55,6 +56,7 @@ export default function ComponentsDemo() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [lastDropdownAction, setLastDropdownAction] = useState<string | null>(null);
   const [textareaValue, setTextareaValue] = useState('');
+  const [showRubricBuilder, setShowRubricBuilder] = useState(false);
 
   const handleFakeDelete = () => {
     setIsDeleting(true);
@@ -587,6 +589,45 @@ export default function ComponentsDemo() {
           />
         </div>
       </Container>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Rubric Builder Section                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <Container className="py-10 mb-16">
+        <PageHeader
+          title="Rubric Builder"
+          description="Full-screen rubric creation UI inspired by Google Classroom. Supports criteria, performance levels, points, and score order."
+        />
+
+        <div className="mt-8 space-y-4">
+          <p className="text-sm text-gray-600">
+            The builder opens in a full-screen overlay. The{' '}
+            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">onSave</code>{' '}
+            callback receives a typed{' '}
+            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">RubricData</code>{' '}
+            payload ready to POST/PUT to the API.
+          </p>
+
+          <Button onClick={() => setShowRubricBuilder(true)} leftIcon={<Plus className="w-4 h-4" />}>
+            Open Rubric Builder
+          </Button>
+        </div>
+      </Container>
+
+      {/* Full-screen rubric builder overlay */}
+      {showRubricBuilder && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <RubricBuilder
+            headerTitle="Create rubric"
+            onClose={() => setShowRubricBuilder(false)}
+            onSave={(data) => {
+              console.log('Rubric payload (ready for API):', data);
+              alert(`Rubric "${data.title}" saved! Check the console for the full payload.`);
+              setShowRubricBuilder(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
