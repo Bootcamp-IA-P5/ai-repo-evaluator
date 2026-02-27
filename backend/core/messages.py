@@ -34,7 +34,7 @@ class Messages:
         DELETE_FAILED = "Failed to delete rubric"
 
     class Evaluation:
-        """Evaluation-related messages (for future use)."""
+        """Evaluation-related messages."""
 
         LIST_RETRIEVED = "Evaluations retrieved successfully"
         LIST_RETRIEVE_FAILED = "Failed to retrieve evaluations"
@@ -45,6 +45,10 @@ class Messages:
 
         CREATED = "Evaluation created successfully"
         CREATE_FAILED = "Failed to create evaluation"
+
+        # AI Summary Messages
+        AI_SUMMARY_PENDING = "Evaluation completed. AI integration pending."
+        AI_SUMMARY_FAILED = "Evaluation failed: {error}"
 
     class Finding:
         """Finding-related messages (for future use)."""
