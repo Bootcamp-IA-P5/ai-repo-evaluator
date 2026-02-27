@@ -17,50 +17,81 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Types — designed to map 1-to-1 with the future API payload
+// API payload types  ← map 1-to-1 with the backend schema
 // ---------------------------------------------------------------------------
 
+/** Maps to a single cell in the rubric grid (one performance level) */
 export interface RubricLevel {
-  /** Unique identifier (uuid in production, random string here) */
-  id: string;
-  title: string;
-  description: string;
-  /** Points awarded for this level. Ignored when useScores is false. */
-  points: number;
+  level_title: string;
+  level_description: string;
+  /** Points awarded at this level. Used when use_scores is enabled. */
+  score_points: number;
 }
 
+/** Maps to a single row in the rubric grid (one evaluation criterion) */
 export interface RubricCriterion {
-  id: string;
   title: string;
   description: string;
-  /** Ordered list of performance levels (columns) */
+  /**
+   * Multiplier applied to the criterion's max score when calculating the
+   * weighted total. Example: weight=1.5 means this criterion counts 50% more.
+   */
+  weight: number;
   levels: RubricLevel[];
 }
 
+/** Root payload for POST /rubrics and PUT /rubrics/:id */
 export interface RubricData {
   title: string;
-  useScores: boolean;
-  /** Highest-to-lowest or lowest-to-highest column order */
-  scoreOrder: 'descending' | 'ascending';
+  description: string;
   criteria: RubricCriterion[];
 }
 
+// ---------------------------------------------------------------------------
+// Internal UI types — extend the API types with React-only fields
+// (these are stripped before calling onSave)
+// ---------------------------------------------------------------------------
+
+interface InternalLevel extends RubricLevel {
+  /** React key — never sent to the API */
+  _id: string;
+}
+
+interface InternalCriterion extends RubricCriterion {
+  /** React key — never sent to the API */
+  _id: string;
+  levels: InternalLevel[];
+}
+
+interface InternalRubric extends RubricData {
+  criteria: InternalCriterion[];
+  /** UI-only: whether to show the score_points field in each level cell */
+  useScores: boolean;
+  /** UI-only: visual column order (does not affect the payload) */
+  scoreOrder: 'descending' | 'ascending';
+}
+
+// ---------------------------------------------------------------------------
+// Component props
+// ---------------------------------------------------------------------------
+
 export interface RubricBuilderProps {
   /**
-   * Initial rubric data. Leave undefined to start a fresh rubric.
-   * Tip: pass the API response here when editing an existing rubric.
+   * Pre-populate the builder with existing rubric data.
+   * Pass the API response directly — the shape matches RubricData exactly.
    */
   defaultValue?: Partial<RubricData>;
   /**
    * Called when the user clicks "Save".
-   * Receives the full RubricData payload — ready to POST/PUT to the API.
+   * Receives the exact RubricData payload ready to POST/PUT to the API
+   * (internal _id and UI-only fields are stripped automatically).
    */
   onSave?: (data: RubricData) => void | Promise<void>;
-  /** Called when the user clicks the X button */
+  /** Called when the user clicks the × button */
   onClose?: () => void;
-  /** Shows a spinner on the Save button while the API call is in flight */
+  /** Puts the Save button in loading state while the API call is in flight */
   isSaving?: boolean;
-  /** Label shown in the top-left header area */
+  /** Label shown in the top-left header */
   headerTitle?: string;
 }
 
@@ -70,25 +101,59 @@ export interface RubricBuilderProps {
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const defaultLevel = (points = 1): RubricLevel => ({
-  id: uid(),
-  title: '',
-  description: '',
-  points,
+const defaultLevel = (score_points = 1): InternalLevel => ({
+  _id: uid(),
+  level_title: '',
+  level_description: '',
+  score_points,
 });
 
-const defaultCriterion = (): RubricCriterion => ({
-  id: uid(),
+const defaultCriterion = (): InternalCriterion => ({
+  _id: uid(),
   title: '',
   description: '',
+  weight: 1,
   levels: [defaultLevel(1)],
 });
 
-const emptyRubric = (): RubricData => ({
+const emptyRubric = (): InternalRubric => ({
   title: '',
+  description: '',
   useScores: true,
   scoreOrder: 'descending',
   criteria: [defaultCriterion()],
+});
+
+/**
+ * Converts InternalRubric → RubricData (strips _id and UI-only fields).
+ * This is the clean API payload passed to onSave.
+ */
+const buildPayload = (rubric: InternalRubric): RubricData => ({
+  title: rubric.title,
+  description: rubric.description,
+  criteria: rubric.criteria.map((c) => ({
+    title: c.title,
+    description: c.description,
+    weight: c.weight,
+    levels: c.levels.map((l) => ({
+      level_title: l.level_title,
+      level_description: l.level_description,
+      score_points: l.score_points,
+    })),
+  })),
+});
+
+/**
+ * Hydrates a RubricData (from the API) into an InternalRubric (adds _id fields).
+ */
+const hydrateRubric = (data: Partial<RubricData>): InternalRubric => ({
+  ...emptyRubric(),
+  ...data,
+  criteria: (data.criteria ?? [defaultCriterion()]).map((c) => ({
+    _id: uid(),
+    ...c,
+    levels: (c.levels ?? [defaultLevel()]).map((l) => ({ _id: uid(), ...l })),
+  })),
 });
 
 // ---------------------------------------------------------------------------
@@ -96,10 +161,10 @@ const emptyRubric = (): RubricData => ({
 // ---------------------------------------------------------------------------
 
 interface LevelCellProps {
-  level: RubricLevel;
+  level: InternalLevel;
   useScores: boolean;
   isOnly: boolean;
-  onChange: (updated: RubricLevel) => void;
+  onChange: (updated: InternalLevel) => void;
   onDelete: () => void;
   onAddBefore: () => void;
   onAddAfter: () => void;
@@ -114,12 +179,11 @@ const LevelCell: React.FC<LevelCellProps> = ({
   onAddBefore,
   onAddAfter,
 }) => {
-  const update = (field: Partial<RubricLevel>) =>
-    onChange({ ...level, ...field });
+  const update = (field: Partial<InternalLevel>) => onChange({ ...level, ...field });
 
   return (
     <div className="relative flex items-stretch gap-0 group/level">
-      {/* Add level BEFORE button */}
+      {/* + Add level BEFORE */}
       <button
         type="button"
         onClick={onAddBefore}
@@ -135,7 +199,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
 
       {/* Level card */}
       <div className="flex-1 border border-gray-200 rounded-lg p-3 bg-white min-w-40">
-        {/* Points */}
+        {/* score_points */}
         {useScores && (
           <div className="mb-2">
             <label className="text-xs text-gray-400 block mb-0.5">
@@ -144,9 +208,9 @@ const LevelCell: React.FC<LevelCellProps> = ({
             <input
               type="number"
               min={0}
-              value={level.points}
+              value={level.score_points}
               onChange={(e) =>
-                update({ points: Math.max(0, Number(e.target.value)) })
+                update({ score_points: Math.max(0, Number(e.target.value)) })
               }
               className={cn(
                 'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
@@ -156,11 +220,11 @@ const LevelCell: React.FC<LevelCellProps> = ({
           </div>
         )}
 
-        {/* Level title */}
+        {/* level_title */}
         <input
           type="text"
-          value={level.title}
-          onChange={(e) => update({ title: e.target.value })}
+          value={level.level_title}
+          onChange={(e) => update({ level_title: e.target.value })}
           placeholder="Level title"
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
@@ -168,10 +232,10 @@ const LevelCell: React.FC<LevelCellProps> = ({
           )}
         />
 
-        {/* Level description */}
+        {/* level_description */}
         <textarea
-          value={level.description}
-          onChange={(e) => update({ description: e.target.value })}
+          value={level.level_description}
+          onChange={(e) => update({ level_description: e.target.value })}
           placeholder="Description"
           rows={3}
           className={cn(
@@ -180,7 +244,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           )}
         />
 
-        {/* Delete level (hidden if it's the only one) */}
+        {/* Delete level */}
         {!isOnly && (
           <button
             type="button"
@@ -196,7 +260,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
         )}
       </div>
 
-      {/* Add level AFTER button */}
+      {/* + Add level AFTER */}
       <button
         type="button"
         onClick={onAddAfter}
@@ -218,10 +282,10 @@ const LevelCell: React.FC<LevelCellProps> = ({
 // ---------------------------------------------------------------------------
 
 interface CriterionCardProps {
-  criterion: RubricCriterion;
+  criterion: InternalCriterion;
   useScores: boolean;
   isOnly: boolean;
-  onChange: (updated: RubricCriterion) => void;
+  onChange: (updated: InternalCriterion) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }
@@ -234,10 +298,10 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
   onDelete,
   onDuplicate,
 }) => {
-  const update = (field: Partial<RubricCriterion>) =>
+  const update = (field: Partial<InternalCriterion>) =>
     onChange({ ...criterion, ...field });
 
-  const updateLevel = (index: number, updated: RubricLevel) => {
+  const updateLevel = (index: number, updated: InternalLevel) => {
     const levels = [...criterion.levels];
     levels[index] = updated;
     update({ levels });
@@ -250,23 +314,25 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
   const addLevelAt = (index: number) => {
     const levels = [...criterion.levels];
     const adjacentPoints =
-      index < levels.length ? levels[index].points : levels[index - 1]?.points ?? 1;
+      index < levels.length
+        ? levels[index].score_points
+        : (levels[index - 1]?.score_points ?? 1);
     levels.splice(index, 0, defaultLevel(Math.max(0, adjacentPoints - 1)));
     update({ levels });
   };
 
   const maxPoints = useScores
-    ? Math.max(...criterion.levels.map((l) => l.points))
+    ? Math.max(...criterion.levels.map((l) => l.score_points), 0)
     : null;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 group/card">
       {/* Card header row */}
       <div className="flex items-start gap-2 mb-4">
-        {/* Drag handle (visual only for now) */}
+        {/* Drag handle (visual only) */}
         <GripVertical className="w-5 h-5 text-gray-300 cursor-grab mt-1 shrink-0" />
 
-        {/* Title + description */}
+        {/* title + description */}
         <div className="flex-1 space-y-2">
           <input
             type="text"
@@ -290,9 +356,27 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
           />
         </div>
 
+        {/* weight field */}
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
+          <label className="text-xs text-gray-400">Weight</label>
+          <input
+            type="number"
+            min={0.1}
+            step={0.1}
+            value={criterion.weight}
+            onChange={(e) =>
+              update({ weight: Math.max(0.1, parseFloat(e.target.value) || 1) })
+            }
+            className={cn(
+              'w-16 border border-gray-300 rounded-md px-2 py-0.5 text-sm text-right',
+              'focus:outline-none focus:ring-2 focus:ring-indigo-500'
+            )}
+          />
+        </div>
+
         {/* Max points badge */}
         {useScores && (
-          <span className="text-sm text-gray-500 shrink-0">
+          <span className="text-sm text-gray-500 shrink-0 mt-5">
             /{maxPoints} pts
           </span>
         )}
@@ -303,7 +387,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
           trigger={
             <button
               type="button"
-              className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+              className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors mt-4"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
@@ -335,11 +419,11 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
         />
       </div>
 
-      {/* Levels row — horizontal scroll on small screens */}
+      {/* Levels row */}
       <div className="flex gap-3 overflow-x-auto pb-2">
         {criterion.levels.map((level, i) => (
           <LevelCell
-            key={level.id}
+            key={level._id}
             level={level}
             useScores={useScores}
             isOnly={criterion.levels.length === 1}
@@ -371,8 +455,27 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
  * - onSave callback receives a typed RubricData payload ready for the API
  * - isSaving prop shows loading state on the Save button
  *
+ * The payload emitted by onSave matches the backend schema exactly:
+ * ```json
+ * {
+ *   "title": "Python Backend Project",
+ *   "description": "Evaluates backend architecture, code quality...",
+ *   "criteria": [
+ *     {
+ *       "title": "Error Handling",
+ *       "description": "Evaluates the completeness of error handling",
+ *       "weight": 1,
+ *       "levels": [
+ *         { "level_title": "Excellent", "level_description": "...", "score_points": 4 },
+ *         { "level_title": "Satisfactory", "level_description": "...", "score_points": 3 }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * ```
+ *
  * @example
- * // In a page or inside a Modal
+ * // Create a new rubric
  * <RubricBuilder
  *   headerTitle="Create rubric"
  *   onClose={() => setOpen(false)}
@@ -384,10 +487,10 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
  * />
  *
  * @example
- * // Editing an existing rubric
+ * // Edit an existing rubric (API response shape matches RubricData directly)
  * <RubricBuilder
  *   headerTitle="Edit rubric"
- *   defaultValue={existingRubric}   // ← API response shape matches RubricData
+ *   defaultValue={rubricFromApi}
  *   onSave={(data) => api.put(`/rubrics/${id}`, data)}
  *   onClose={handleClose}
  * />
@@ -399,18 +502,17 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   isSaving = false,
   headerTitle = 'Create rubric',
 }) => {
-  const [rubric, setRubric] = useState<RubricData>(() => ({
-    ...emptyRubric(),
-    ...defaultValue,
-  }));
+  const [rubric, setRubric] = useState<InternalRubric>(() =>
+    defaultValue ? hydrateRubric(defaultValue) : emptyRubric()
+  );
 
-  const update = (field: Partial<RubricData>) =>
+  const update = (field: Partial<InternalRubric>) =>
     setRubric((prev) => ({ ...prev, ...field }));
 
   // --- Criteria operations ---
 
   const updateCriterion = useCallback(
-    (index: number, updated: RubricCriterion) => {
+    (index: number, updated: InternalCriterion) => {
       const criteria = [...rubric.criteria];
       criteria[index] = updated;
       update({ criteria });
@@ -428,10 +530,10 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   const duplicateCriterion = useCallback(
     (index: number) => {
       const source = rubric.criteria[index];
-      const clone: RubricCriterion = {
+      const clone: InternalCriterion = {
         ...source,
-        id: uid(),
-        levels: source.levels.map((l) => ({ ...l, id: uid() })),
+        _id: uid(),
+        levels: source.levels.map((l) => ({ ...l, _id: uid() })),
         title: source.title ? `${source.title} (copy)` : '',
       };
       const criteria = [...rubric.criteria];
@@ -445,16 +547,16 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
     update({ criteria: [...rubric.criteria, defaultCriterion()] });
   };
 
-  // --- Total points ---
+  // --- Derived values ---
   const totalPoints = rubric.useScores
     ? rubric.criteria.reduce(
-        (sum, c) => sum + Math.max(...c.levels.map((l) => l.points), 0),
+        (sum, c) => sum + Math.max(...c.levels.map((l) => l.score_points), 0),
         0
       )
     : null;
 
-  // --- Save ---
-  const handleSave = () => onSave?.(rubric);
+  // --- Save: strip internal fields and emit clean API payload ---
+  const handleSave = () => onSave?.(buildPayload(rubric));
 
   // ---------------------------------------------------------------------------
   // Render
@@ -494,21 +596,35 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
       <main className="flex-1 overflow-y-auto px-4 py-8 bg-gray-50">
         <div className="max-w-4xl mx-auto space-y-6">
 
-          {/* Rubric title */}
+          {/* Rubric title + description */}
           <div className="flex items-start justify-between gap-4">
-            <input
-              type="text"
-              value={rubric.title}
-              onChange={(e) => update({ title: e.target.value })}
-              placeholder="Untitled rubric"
-              className={cn(
-                'flex-1 text-3xl font-bold text-gray-900 bg-transparent',
-                'border-b-2 border-transparent focus:border-indigo-400 focus:outline-none',
-                'pb-1 placeholder:text-gray-300 transition-colors'
-              )}
-            />
+            <div className="flex-1 space-y-2">
+              <input
+                type="text"
+                value={rubric.title}
+                onChange={(e) => update({ title: e.target.value })}
+                placeholder="Untitled rubric"
+                className={cn(
+                  'w-full text-3xl font-bold text-gray-900 bg-transparent',
+                  'border-b-2 border-transparent focus:border-indigo-400 focus:outline-none',
+                  'pb-1 placeholder:text-gray-300 transition-colors'
+                )}
+              />
+              {/* Rubric description (top-level API field) */}
+              <input
+                type="text"
+                value={rubric.description}
+                onChange={(e) => update({ description: e.target.value })}
+                placeholder="Rubric description (optional)"
+                className={cn(
+                  'w-full text-sm text-gray-500 bg-transparent',
+                  'border-b border-transparent focus:border-indigo-300 focus:outline-none',
+                  'pb-0.5 placeholder:text-gray-300 transition-colors'
+                )}
+              />
+            </div>
 
-            {/* Rubric-level three-dot menu */}
+            {/* Rubric-level menu */}
             <DropdownMenu
               align="right"
               trigger={
@@ -535,9 +651,8 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
             />
           </div>
 
-          {/* Score settings row */}
+          {/* Score settings row — UI only, not sent to API */}
           <div className="flex flex-wrap items-center gap-6">
-            {/* Use scores toggle */}
             <button
               type="button"
               onClick={() => update({ useScores: !rubric.useScores })}
@@ -551,7 +666,6 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
               Use scores
             </button>
 
-            {/* Score order selector */}
             {rubric.useScores && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Score order:</span>
@@ -559,9 +673,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
                   <select
                     value={rubric.scoreOrder}
                     onChange={(e) =>
-                      update({
-                        scoreOrder: e.target.value as RubricData['scoreOrder'],
-                      })
+                      update({ scoreOrder: e.target.value as InternalRubric['scoreOrder'] })
                     }
                     className={cn(
                       'appearance-none pr-8 pl-2 py-1 border border-gray-300 rounded-md',
@@ -576,7 +688,6 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
               </div>
             )}
 
-            {/* Total points badge */}
             {rubric.useScores && totalPoints !== null && (
               <span className="ml-auto text-sm font-medium text-gray-500">
                 Total: <strong className="text-gray-800">{totalPoints}</strong> pts
@@ -588,7 +699,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
           <div className="space-y-4">
             {rubric.criteria.map((criterion, index) => (
               <CriterionCard
-                key={criterion.id}
+            key={criterion._id}
                 criterion={criterion}
                 useScores={rubric.useScores}
                 isOnly={rubric.criteria.length === 1}
