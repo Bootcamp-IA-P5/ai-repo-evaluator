@@ -478,10 +478,10 @@ export default function RubricsPage() {
         onClose={() => setDeleteRubric(null)}
         onConfirm={handleDelete}
         title="Delete Rubric"
-        description={`Are you sure you want to delete "${deleteRubric?.title}"? This will permanently remove the rubric and all its criteria.`}
+        message={`Are you sure you want to delete "${deleteRubric?.title}"? This will permanently remove the rubric and all its criteria.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        variant="danger"
+        confirmVariant="danger"
         isLoading={isDeleting}
       />
     </div>
