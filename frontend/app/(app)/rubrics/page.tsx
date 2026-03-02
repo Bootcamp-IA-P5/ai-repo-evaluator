@@ -10,7 +10,7 @@ import {
   ChevronUp,
   Calendar,
 } from 'lucide-react';
-import { Button, Card, Alert, Modal, ConfirmModal } from '@/components/ui';
+import { Button, Card, Alert, ConfirmModal } from '@/components/ui';
 import { RubricBuilder } from '@/components/ui/RubricBuilder';
 import type { RubricData } from '@/components/ui/RubricBuilder';
 import { PageHeader } from '@/components/layout';
@@ -431,46 +431,44 @@ export default function RubricsPage() {
         </div>
       )}
 
-      {/* ── Create Modal ── */}
-      <Modal
-        isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Create Rubric"
-        size="xl"
-        className="max-w-5xl"
-        disableBackdropClose
-      >
-        <RubricBuilder
-          onSave={handleCreate}
-          onClose={() => setCreateOpen(false)}
-          isSaving={isSaving}
-          headerTitle="New Rubric"
-        />
-      </Modal>
+      {/* ── Create Overlay ── */}
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+          {/* Panel */}
+          <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
+            <RubricBuilder
+              onSave={handleCreate}
+              onClose={() => setCreateOpen(false)}
+              isSaving={isSaving}
+              headerTitle="New Rubric"
+            />
+          </div>
+        </div>
+      )}
 
-      {/* ── Edit Modal ── */}
-      <Modal
-        isOpen={editRubric !== null}
-        onClose={() => setEditRubric(null)}
-        title="Edit Rubric"
-        size="xl"
-        className="max-w-5xl"
-        disableBackdropClose
-      >
-        {editRubric && (
-          <RubricBuilder
-            defaultValue={{
-              title: editRubric.title,
-              description: editRubric.description,
-              criteria: editRubric.criteria,
-            }}
-            onSave={handleEdit}
-            onClose={() => setEditRubric(null)}
-            isSaving={isSaving}
-            headerTitle="Edit Rubric"
-          />
-        )}
-      </Modal>
+      {/* ── Edit Overlay ── */}
+      {editRubric !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+          {/* Panel */}
+          <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
+            <RubricBuilder
+              defaultValue={{
+                title: editRubric.title,
+                description: editRubric.description,
+                criteria: editRubric.criteria,
+              }}
+              onSave={handleEdit}
+              onClose={() => setEditRubric(null)}
+              isSaving={isSaving}
+              headerTitle="Edit Rubric"
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Delete Confirm Modal ── */}
       <ConfirmModal
