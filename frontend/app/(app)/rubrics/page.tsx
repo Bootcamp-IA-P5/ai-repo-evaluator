@@ -69,7 +69,9 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 
 export default function RubricsPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  // Use relative URLs so the Next.js proxy rewrite handles routing to the backend.
+  // This avoids CORS issues regardless of the NEXT_PUBLIC_API_URL value.
+  const apiUrl = '';
 
   // Rubric list
   const [rubrics, setRubrics] = useState<RubricSummary[]>([]);

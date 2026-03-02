@@ -88,8 +88,8 @@ export default function NewEvaluationPage() {
 
   // Load rubrics on mount
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
-    fetch(`${apiUrl}/api/v1/rubrics`)
+    // Use relative URL so the Next.js proxy rewrite routes requests to the backend
+    fetch(`/api/v1/rubrics`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load rubrics');
         return res.json();
@@ -121,7 +121,7 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+      // Use relative URL so the Next.js proxy rewrite routes requests to the backend
       const body = new FormData();
       body.append('rubric_id', form.rubricId);
       if (form.briefingFile) body.append('briefing', form.briefingFile);
@@ -130,7 +130,7 @@ export default function NewEvaluationPage() {
       body.append('model', form.model);
       if (form.apiKey) body.append('api_key', form.apiKey);
 
-      const res = await fetch(`${apiUrl}/api/v1/evaluations`, {
+      const res = await fetch(`/api/v1/evaluations`, {
         method: 'POST',
         body,
       });
