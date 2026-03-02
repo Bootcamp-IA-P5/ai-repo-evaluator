@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+
+  // Prevent Next.js from stripping trailing slashes before rewrites are applied.
+  // Without this, POST /api/v1/rubrics/ becomes POST /api/v1/rubrics (no slash),
+  // the backend returns 307, and the browser follows the redirect directly to
+  // backend:8000 — bypassing the proxy and causing CORS errors.
+  skipTrailingSlashRedirect: true,
+
   async redirects() {
     return [
       {
@@ -12,19 +19,8 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  /**
-   * Proxy all /api/v1/* requests through the Next.js server to avoid
-   * CORS issues in the browser. The destination uses the Docker Compose
-   * service name "backend" which is only reachable server-side.
-   */
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://backend:8000/api/v1/:path*',
-      },
-    ];
-  },
+  // NOTE: /api/v1/* proxying is handled by the Route Handler at
+  // app/api/v1/[...path]/route.ts — no rewrites needed.
 };
 
 export default nextConfig;
