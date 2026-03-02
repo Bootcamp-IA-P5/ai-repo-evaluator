@@ -165,7 +165,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
         {selectedFile ? (
           <div className="flex items-center gap-3 p-4">
-            <div className="flex-shrink-0 p-2 bg-indigo-100 rounded-lg">
+            <div className="shrink-0 p-2 bg-indigo-100 rounded-lg">
               <File className="w-6 h-6 text-indigo-600" />
             </div>
             <div className="flex-1 min-w-0">
@@ -179,7 +179,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             <button
               type="button"
               onClick={handleRemove}
-              className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              className="shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
               aria-label="Remove file"
             >
               <X className="w-5 h-5" />
@@ -205,7 +205,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
       {displayError && (
         <div className="flex items-start gap-2 text-sm text-red-600" id="file-error" role="alert">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <span>{displayError}</span>
         </div>
       )}
