@@ -15,10 +15,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # ──────────────────────────────────────────────────────────────────────
 
 # Source code files → processed by LanguageParser (understands classes, functions)
-CODE_SUFFIXES = [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".rb", ".go", ".php"]
+CODE_SUFFIXES = [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".rb", ".go", ".php", ".mjs"]
 
 # Text/documentation files → read as plain text
-TEXT_SUFFIXES = [".md", ".txt", ".rst", ".html", ".css"]
+TEXT_SUFFIXES = [".md", ".txt", ".rst", ".html", ".css", ".sh", ".bat", ".ps1"]
 
 # Configuration/data files → read as plain text
 CONFIG_SUFFIXES = [".json", ".yml", ".yaml", ".toml", ".ini", ".cfg",
@@ -31,6 +31,14 @@ SPECIAL_FILES = {"Dockerfile", "Makefile", "Procfile", "Gemfile",
 # Files/directories to always ignore
 IGNORE_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv",
                ".tox", ".mypy_cache", ".pytest_cache", "dist", "build"}
+
+# Generated/lock files to always ignore (large and not useful for analysis)
+IGNORE_FILES = {"package-lock.json", "yarn.lock", "poetry.lock",
+                "Pipfile.lock", "composer.lock", "pnpm-lock.yaml",
+                ".DS_Store"}
+
+# Maximum file size to read (bytes) — prevents loading huge generated files
+MAX_FILE_SIZE = 50_000  # ~50KB
 
 
 class GitLoaderService:
@@ -54,6 +62,10 @@ class GitLoaderService:
 
         The clone is automatically deleted when finished (or on error).
         """
+        # Validate GitHub URL
+        if not repo_url.startswith(("https://github.com/", "git@github.com:")):
+            raise ValueError("Only public GitHub repositories are supported")
+
         target_dir = tempfile.mkdtemp(prefix="repo_clone_")
 
         try:
@@ -117,22 +129,43 @@ class GitLoaderService:
         Loads source code files with LanguageParser.
         This parser understands code structure (functions, classes)
         and produces smarter chunks.
+
+        Uses os.walk to respect IGNORE_DIRS (e.g. node_modules)
+        before passing files to LanguageParser.
         """
-        try:
-            loader = GenericLoader.from_path(
-                repo_dir,
-                glob="**/*",
-                suffixes=CODE_SUFFIXES,
-                parser=LanguageParser()
-            )
-            docs = loader.load()
-            for doc in docs:
-                doc.metadata["type"] = "source_code"
-                doc.metadata["file_path"] = os.path.relpath(doc.metadata["source"], repo_dir)
-            return docs
-        except Exception as e:
-            logger.warning(f"Error loading code files: {e}")
-            return []
+        code_suffixes_set = set(CODE_SUFFIXES)
+        documents = []
+
+        for root, dirs, files in os.walk(repo_dir):
+            # Skip ignored directories
+            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+
+            for filename in files:
+                _, ext = os.path.splitext(filename)
+                if ext.lower() not in code_suffixes_set:
+                    continue
+                if filename in IGNORE_FILES:
+                    continue
+
+                filepath = os.path.join(root, filename)
+                try:
+                    loader = GenericLoader.from_path(
+                        root,
+                        glob=filename,
+                        suffixes=[ext],
+                        parser=LanguageParser()
+                    )
+                    docs = loader.load()
+                    for doc in docs:
+                        doc.metadata["type"] = "source_code"
+                        doc.metadata["file_path"] = os.path.relpath(
+                            doc.metadata["source"], repo_dir
+                        )
+                    documents.extend(docs)
+                except Exception as e:
+                    logger.warning(f"Error loading {filepath}: {e}")
+
+        return documents
 
     def _load_notebooks(self, repo_dir: str) -> list[Document]:
         """
@@ -202,6 +235,10 @@ class GitLoaderService:
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
 
             for filename in files:
+                # Skip lock/generated files
+                if filename in IGNORE_FILES:
+                    continue
+
                 filepath = os.path.join(root, filename)
                 rel_path = os.path.relpath(filepath, repo_dir)
 
@@ -219,7 +256,7 @@ class GitLoaderService:
 
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read()
+                        content = f.read(MAX_FILE_SIZE)
 
                     if not content.strip():
                         continue
