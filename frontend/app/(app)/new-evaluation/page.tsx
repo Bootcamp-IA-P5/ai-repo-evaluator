@@ -88,14 +88,13 @@ export default function NewEvaluationPage() {
 
   // Load rubrics on mount
   useEffect(() => {
-    // Use relative URL so the Next.js proxy rewrite routes requests to the backend
-    fetch(`/api/v1/rubrics`)
+    fetch(`/api/v1/rubrics/`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load rubrics');
         return res.json();
       })
-      .then((data: RubricOption[]) => {
-        setRubrics(data);
+      .then((json: { success: boolean; data: RubricOption[] }) => {
+        setRubrics(json.data ?? []);
         setRubricsLoading(false);
       })
       .catch(() => {
