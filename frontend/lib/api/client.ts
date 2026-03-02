@@ -4,7 +4,9 @@ import axios from 'axios';
  * HTTP client configured to communicate with the FastAPI backend
  */
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  // Use relative URL so all requests go through the Next.js proxy (next.config.ts)
+  // This avoids CORS issues: /api/v1/* → http://backend:8000/api/v1/* (server-side)
+  baseURL: '',
   timeout: 30000,
 });
 
