@@ -572,7 +572,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   return (
     <div className="flex flex-col h-full bg-white">
       {/* ── Top header bar ── */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white sticky top-0 z-20 shadow-sm">
+      <header className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white shrink-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
           {onClose && (
             <button
