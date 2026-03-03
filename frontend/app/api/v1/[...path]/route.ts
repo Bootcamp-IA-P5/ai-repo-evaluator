@@ -48,7 +48,17 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       : {}),
   };
 
-  const upstream = await fetch(target, fetchOptions);
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, fetchOptions);
+  } catch (err) {
+    // Network-level failure (DNS, TCP, etc.) — backend unreachable
+    console.error('[proxy] upstream fetch failed:', target, err);
+    return new NextResponse(
+      JSON.stringify({ success: false, errors: ['Backend unreachable'], message: 'Proxy error' }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
 
   const contentType = upstream.headers.get('content-type') ?? '';
   const body = await upstream.text();
