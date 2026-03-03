@@ -69,7 +69,11 @@ class EvaluationServiceAPI:
             try:
                 briefing_processor = BriefingProcessor(evaluation_request.briefing_path)
                 briefing_chunks = briefing_processor.process()
-                briefing_snapshot = json.dumps(briefing_chunks)
+                # Serialize Document objects to dicts for database storage
+                briefing_snapshot = json.dumps([
+                    {"page_content": doc.page_content, "metadata": doc.metadata}
+                    for doc in briefing_chunks
+                ])
                 logger.debug(f"Processed briefing into {len(briefing_chunks)} chunks")
             except FileNotFoundError:
                 logger.warning(f"Briefing file not found: {evaluation_request.briefing_path}")
