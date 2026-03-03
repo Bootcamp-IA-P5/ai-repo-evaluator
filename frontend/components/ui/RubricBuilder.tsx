@@ -221,7 +221,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
               }
               className={cn(
                 'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-                'text-sm pb-0.5 bg-transparent'
+                'text-sm pb-0.5 bg-transparent text-gray-900'
               )}
             />
           </div>
@@ -235,7 +235,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           placeholder="Level title"
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-            'text-sm pb-0.5 bg-transparent mb-2 placeholder:text-gray-300'
+            'text-sm pb-0.5 bg-transparent mb-2 text-gray-900 placeholder:text-gray-300'
           )}
         />
 
@@ -247,7 +247,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           rows={3}
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-            'text-sm pb-0.5 bg-transparent resize-none placeholder:text-gray-300'
+            'text-sm pb-0.5 bg-transparent resize-none text-gray-900 placeholder:text-gray-300'
           )}
         />
 
@@ -348,7 +348,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
             placeholder="Criterion title (required)"
             className={cn(
               'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-              'text-base font-medium pb-1 bg-transparent placeholder:text-gray-300'
+              'text-base font-medium pb-1 bg-transparent text-gray-900 placeholder:text-gray-300'
             )}
           />
           <input
