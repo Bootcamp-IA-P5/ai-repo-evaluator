@@ -21,23 +21,42 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const search = req.nextUrl.search;                          // e.g. ?limit=10
   const target = `${BACKEND_URL}${pathname}${search}`;
 
-  // Forward request body only for methods that carry a body.
-  // DELETE, OPTIONS, etc. must NOT pass a body — passing an empty ReadableStream
-  // causes Node 18 fetch to throw TypeError: fetch failed.
+  // Only POST / PUT / PATCH carry a request body.
+  // For all other methods (GET, DELETE, HEAD, OPTIONS) we must NOT set `body`
+  // or `duplex` — Node 18 fetch throws TypeError when `duplex: 'half'` is
+  // present without a real body stream.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
-  const upstream = await fetch(target, {
+  // Build fetch options conditionally so DELETE never gets body/duplex.
+  // We also do NOT use redirect:'follow' because Node fetch re-sends the original
+  // request (including any problematic options) on 307/308 — instead we handle
+  // the redirect manually so we control the options on the second hop.
+  const fetchOptions: RequestInit & { duplex?: string } = {
     method: req.method,
     headers: {
       'Content-Type': req.headers.get('content-type') ?? 'application/json',
     },
-    body: hasBody ? req.body : undefined,
-    // Follow redirects server-side so the browser never sees backend:8000
-    redirect: 'follow',
-    // Required for streaming body passthrough
-    // @ts-expect-error — Node 18+ fetch supports duplex
-    duplex: 'half',
-  });
+    redirect: 'manual', // capture 3xx ourselves
+  };
+  if (hasBody) {
+    fetchOptions.body = req.body as BodyInit;
+    fetchOptions.duplex = 'half'; // required for streaming body in Node 18+
+  }
+
+  let upstream = await fetch(target, fetchOptions);
+
+  // Handle 307 / 308 redirects manually so we keep full control of options.
+  // FastAPI may 307 if the ASGI server applies its own trailing-slash redirect.
+  if (upstream.status === 307 || upstream.status === 308) {
+    const location = upstream.headers.get('location');
+    if (location) {
+      // Resolve relative Location headers against the backend base URL
+      const redirectTarget = location.startsWith('http')
+        ? location
+        : `${BACKEND_URL}${location}`;
+      upstream = await fetch(redirectTarget, fetchOptions);
+    }
+  }
 
   const contentType = upstream.headers.get('content-type') ?? '';
   const body = await upstream.text();
