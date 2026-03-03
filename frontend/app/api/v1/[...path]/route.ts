@@ -21,8 +21,10 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const search = req.nextUrl.search;                          // e.g. ?limit=10
   const target = `${BACKEND_URL}${pathname}${search}`;
 
-  // Forward request body for methods that allow it
-  const hasBody = !['GET', 'HEAD'].includes(req.method);
+  // Forward request body only for methods that carry a body.
+  // DELETE, OPTIONS, etc. must NOT pass a body — passing an empty ReadableStream
+  // causes Node 18 fetch to throw TypeError: fetch failed.
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
   const upstream = await fetch(target, {
     method: req.method,

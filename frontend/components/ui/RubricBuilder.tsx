@@ -570,7 +570,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col h-full bg-white min-h-screen">
+    <div className="flex flex-col h-full bg-white">
       {/* ── Top header bar ── */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
@@ -600,7 +600,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
       </header>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto px-4 py-8 bg-gray-50">
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 py-8 bg-gray-50">
         <div className="max-w-4xl mx-auto space-y-6">
 
           {/* Rubric title + description */}

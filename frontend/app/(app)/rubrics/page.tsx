@@ -9,6 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button, Card, Alert, ConfirmModal } from '@/components/ui';
 import { RubricBuilder } from '@/components/ui/RubricBuilder';
@@ -99,6 +101,28 @@ export default function RubricsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
+  // Inline level editing state (Option C — granular level management)
+  // ---------------------------------------------------------------------------
+
+  /** The level currently being edited inline in the expanded card view. */
+  const [editingLevel, setEditingLevel] = useState<{
+    rubricId: number;
+    criterionId: number;
+    levelId: number;
+    data: { level_title: string; level_description: string; score_points: number };
+  } | null>(null);
+
+  /** The criterion that is currently receiving a new level (add-level form open). */
+  const [addingLevel, setAddingLevel] = useState<{
+    rubricId: number;
+    criterionId: number;
+    data: { level_title: string; level_description: string; score_points: number };
+  } | null>(null);
+
+  /** Indicates an in-flight PUT / POST / DELETE on a single level. */
+  const [levelLoading, setLevelLoading] = useState(false);
+
+  // ---------------------------------------------------------------------------
   // Fetch helpers
   // ---------------------------------------------------------------------------
 
@@ -138,6 +162,23 @@ export default function RubricsPage() {
       }
     },
     [apiUrl, criteriaCache]
+  );
+
+  /**
+   * Force-refetches a rubric detail and replaces the cache entry.
+   * Used after inline level edits so the expanded card reflects the latest data.
+   */
+  const refreshRubricDetail = useCallback(
+    async (id: number) => {
+      try {
+        const res = await fetch(`${apiUrl}/api/v1/rubrics/${id}/`);
+        if (!res.ok) return;
+        const json: ApiResponse<RubricDetail> = await res.json();
+        if (!json.success) return;
+        setCriteriaCache((prev) => ({ ...prev, [id]: json.data }));
+      } catch { /* silently ignore refresh errors */ }
+    },
+    [apiUrl]
   );
 
   // ---------------------------------------------------------------------------
@@ -290,6 +331,93 @@ export default function RubricsPage() {
   };
 
   // ---------------------------------------------------------------------------
+  // Inline level handlers (Option C — granular level management)
+  // Each action calls the appropriate /criteria/{cid}/levels/* endpoint and
+  // then refreshes the cached rubric detail so the expanded view stays in sync.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PUT /rubrics/{rid}/criteria/{cid}/levels/{lid}/
+   * Saves title, description, and score_points of the level currently in edit mode.
+   */
+  const handleUpdateLevel = async () => {
+    if (!editingLevel) return;
+    setLevelLoading(true);
+    setActionError(null);
+    try {
+      const { rubricId, criterionId, levelId, data } = editingLevel;
+      const res = await fetch(
+        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/${levelId}/`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }
+      );
+      if (!res.ok) throw new Error(`Failed to update level (${res.status})`);
+      const json: ApiResponse<RubricLevel> = await res.json();
+      if (!json.success) throw new Error(json.message || 'Failed to update level');
+      setEditingLevel(null);
+      await refreshRubricDetail(rubricId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to update level');
+    } finally {
+      setLevelLoading(false);
+    }
+  };
+
+  /**
+   * DELETE /rubrics/{rid}/criteria/{cid}/levels/{lid}/
+   * Removes a single performance level from a criterion.
+   */
+  const handleDeleteLevel = async (rubricId: number, criterionId: number, levelId: number) => {
+    setLevelLoading(true);
+    setActionError(null);
+    try {
+      const res = await fetch(
+        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/${levelId}/`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error(`Failed to delete level (${res.status})`);
+      await refreshRubricDetail(rubricId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete level');
+    } finally {
+      setLevelLoading(false);
+    }
+  };
+
+  /**
+   * POST /rubrics/{rid}/criteria/{cid}/levels/
+   * Appends a new performance level to an existing criterion.
+   */
+  const handleAddLevel = async () => {
+    if (!addingLevel) return;
+    setLevelLoading(true);
+    setActionError(null);
+    try {
+      const { rubricId, criterionId, data } = addingLevel;
+      const res = await fetch(
+        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        }
+      );
+      if (!res.ok) throw new Error(`Failed to add level (${res.status})`);
+      const json: ApiResponse<RubricLevel> = await res.json();
+      if (!json.success) throw new Error(json.message || 'Failed to add level');
+      setAddingLevel(null);
+      await refreshRubricDetail(rubricId);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to add level');
+    } finally {
+      setLevelLoading(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -426,28 +554,253 @@ export default function RubricsPage() {
                   </div>
                 </div>
 
-                {/* Expanded criteria list */}
+                {/* Expanded criteria list — with inline granular level management */}
                 {isExpanded && detail && (
-                  <div className="border-t border-gray-100 px-5 py-3 bg-gray-50">
+                  <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-5">
                     {detail.criteria.length === 0 ? (
                       <p className="text-sm text-gray-400 italic">No criteria defined.</p>
                     ) : (
-                      <ul className="space-y-3">
-                        {detail.criteria.map((criterion, idx) => (
-                          <li key={idx}>
-                            <p className="text-sm font-medium text-gray-800">{criterion.title}</p>
-                            {criterion.description && (
-                              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                                {criterion.description}
-                              </p>
-                            )}
-                            <p className="text-xs text-indigo-600 mt-1">
-                              Weight: {criterion.weight} &middot; {criterion.levels.length} level
-                              {criterion.levels.length !== 1 ? 's' : ''}
+                      detail.criteria.map((criterion) => (
+                        <div key={criterion.id ?? criterion.title} className="text-sm">
+                          {/* Criterion header */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-gray-800 flex-1">
+                              {criterion.title}
+                            </span>
+                            <span className="text-xs text-indigo-600 shrink-0">
+                              weight: {criterion.weight}
+                            </span>
+                          </div>
+                          {criterion.description && (
+                            <p className="text-xs text-gray-500 mb-2 leading-relaxed">
+                              {criterion.description}
                             </p>
-                          </li>
-                        ))}
-                      </ul>
+                          )}
+
+                          {/* Levels */}
+                          <div className="space-y-1 pl-1">
+                            {criterion.levels.map((level) => {
+                              const isEditingThis =
+                                editingLevel?.criterionId === criterion.id &&
+                                editingLevel?.levelId === level.id;
+
+                              if (isEditingThis && editingLevel) {
+                                return (
+                                  <div
+                                    key={level.id}
+                                    className="rounded-md border border-indigo-300 bg-indigo-50 p-2 space-y-1.5"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        autoFocus
+                                        className="flex-1 text-xs border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
+                                        placeholder="Level title"
+                                        value={editingLevel.data.level_title}
+                                        onChange={(e) =>
+                                          setEditingLevel({
+                                            ...editingLevel,
+                                            data: { ...editingLevel.data, level_title: e.target.value },
+                                          })
+                                        }
+                                      />
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        className="w-14 text-xs border-b border-indigo-400 bg-transparent focus:outline-none text-right"
+                                        value={editingLevel.data.score_points}
+                                        onChange={(e) =>
+                                          setEditingLevel({
+                                            ...editingLevel,
+                                            data: {
+                                              ...editingLevel.data,
+                                              score_points: Math.max(0, Number(e.target.value)),
+                                            },
+                                          })
+                                        }
+                                      />
+                                      <span className="text-xs text-gray-400 shrink-0">pts</span>
+                                      <button
+                                        onClick={handleUpdateLevel}
+                                        disabled={levelLoading}
+                                        title="Save changes"
+                                        className="p-1 rounded text-green-600 hover:bg-green-100 disabled:opacity-50 shrink-0"
+                                      >
+                                        {levelLoading ? (
+                                          <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                          <Check className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingLevel(null)}
+                                        disabled={levelLoading}
+                                        title="Cancel"
+                                        className="p-1 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 shrink-0"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                    <textarea
+                                      rows={2}
+                                      className="w-full text-xs border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
+                                      placeholder="Level description (optional)"
+                                      value={editingLevel.data.level_description}
+                                      onChange={(e) =>
+                                        setEditingLevel({
+                                          ...editingLevel,
+                                          data: {
+                                            ...editingLevel.data,
+                                            level_description: e.target.value,
+                                          },
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div
+                                  key={level.id}
+                                  className="flex items-center gap-2 py-0.5 group/lvlrow"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-300 shrink-0" />
+                                  <span
+                                    className="flex-1 text-xs text-gray-700 truncate"
+                                    title={level.level_description || level.level_title}
+                                  >
+                                    {level.level_title || (
+                                      <span className="italic text-gray-400">(untitled)</span>
+                                    )}
+                                  </span>
+                                  <span className="text-xs font-medium text-indigo-600 shrink-0">
+                                    {level.score_points} pts
+                                  </span>
+                                  {/* Edit level — PUT /criteria/{cid}/levels/{lid}/ */}
+                                  <button
+                                    onClick={() =>
+                                      setEditingLevel({
+                                        rubricId: rubric.id,
+                                        criterionId: criterion.id!,
+                                        levelId: level.id!,
+                                        data: {
+                                          level_title: level.level_title,
+                                          level_description: level.level_description,
+                                          score_points: level.score_points,
+                                        },
+                                      })
+                                    }
+                                    title="Edit level"
+                                    className="p-0.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 opacity-0 group-hover/lvlrow:opacity-100 transition-opacity shrink-0"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+                                  {/* Delete level — DELETE /criteria/{cid}/levels/{lid}/ */}
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteLevel(rubric.id, criterion.id!, level.id!)
+                                    }
+                                    disabled={levelLoading || criterion.levels.length <= 1}
+                                    title={
+                                      criterion.levels.length <= 1
+                                        ? 'Cannot delete the only level'
+                                        : 'Delete level'
+                                    }
+                                    className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover/lvlrow:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+
+                            {/* Add level form / button — POST /criteria/{cid}/levels/ */}
+                            {addingLevel?.criterionId === criterion.id ? (
+                              <div className="rounded-md border border-indigo-300 bg-indigo-50 p-2 space-y-1.5 mt-1">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    autoFocus
+                                    className="flex-1 text-xs border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
+                                    placeholder="Level title (required)"
+                                    value={addingLevel.data.level_title}
+                                    onChange={(e) =>
+                                      setAddingLevel({
+                                        ...addingLevel,
+                                        data: { ...addingLevel.data, level_title: e.target.value },
+                                      })
+                                    }
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    className="w-14 text-xs border-b border-indigo-400 bg-transparent focus:outline-none text-right"
+                                    value={addingLevel.data.score_points}
+                                    onChange={(e) =>
+                                      setAddingLevel({
+                                        ...addingLevel,
+                                        data: {
+                                          ...addingLevel.data,
+                                          score_points: Math.max(0, Number(e.target.value)),
+                                        },
+                                      })
+                                    }
+                                  />
+                                  <span className="text-xs text-gray-400 shrink-0">pts</span>
+                                  <button
+                                    onClick={handleAddLevel}
+                                    disabled={levelLoading || !addingLevel.data.level_title.trim()}
+                                    title="Confirm add level"
+                                    className="p-1 rounded text-green-600 hover:bg-green-100 disabled:opacity-50 shrink-0"
+                                  >
+                                    {levelLoading ? (
+                                      <div className="w-3 h-3 border border-green-600 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <Check className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => setAddingLevel(null)}
+                                    disabled={levelLoading}
+                                    title="Cancel"
+                                    className="p-1 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 shrink-0"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                <textarea
+                                  rows={2}
+                                  className="w-full text-xs border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
+                                  placeholder="Level description (optional)"
+                                  value={addingLevel.data.level_description}
+                                  onChange={(e) =>
+                                    setAddingLevel({
+                                      ...addingLevel,
+                                      data: {
+                                        ...addingLevel.data,
+                                        level_description: e.target.value,
+                                      },
+                                    })
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setAddingLevel({
+                                    rubricId: rubric.id,
+                                    criterionId: criterion.id!,
+                                    data: { level_title: '', level_description: '', score_points: 1 },
+                                  })
+                                }
+                                className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 mt-1 px-1 py-0.5 rounded hover:bg-indigo-50 transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add level
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
                 )}
