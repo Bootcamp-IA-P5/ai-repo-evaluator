@@ -22,6 +22,8 @@ import {
 
 /** Maps to a single cell in the rubric grid (one performance level) */
 export interface RubricLevel {
+  /** Present when hydrated from the API (used for edit diffing). */
+  id?: number;
   level_title: string;
   level_description: string;
   /** Points awarded at this level. Used when use_scores is enabled. */
@@ -30,6 +32,8 @@ export interface RubricLevel {
 
 /** Maps to a single row in the rubric grid (one evaluation criterion) */
 export interface RubricCriterion {
+  /** Present when hydrated from the API (used for edit diffing). */
+  id?: number;
   title: string;
   description: string;
   /**
@@ -132,10 +136,13 @@ const buildPayload = (rubric: InternalRubric): RubricData => ({
   title: rubric.title,
   description: rubric.description,
   criteria: rubric.criteria.map((c) => ({
+    // Preserve id so edit pages can diff existing vs new criteria
+    ...(c.id !== undefined ? { id: c.id } : {}),
     title: c.title,
     description: c.description,
     weight: c.weight,
     levels: c.levels.map((l) => ({
+      ...(l.id !== undefined ? { id: l.id } : {}),
       level_title: l.level_title,
       level_description: l.level_description,
       score_points: l.score_points,

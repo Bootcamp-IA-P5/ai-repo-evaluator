@@ -195,15 +195,59 @@ export default function RubricsPage() {
     setIsSaving(true);
     setActionError(null);
     try {
-      const res = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}`, {
+      // Step 1: Update rubric metadata only (PUT only accepts title + description)
+      const metaRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ title: data.title, description: data.description }),
       });
-      if (!res.ok) throw new Error(`Failed to update rubric (${res.status})`);
-      const json: ApiResponse<RubricSummary> = await res.json();
-      if (!json.success) throw new Error(json.message || 'Failed to update rubric');
-      // Invalidate cache so the updated criteria are refetched on next expand
+      if (!metaRes.ok) throw new Error(`Failed to update rubric (${metaRes.status})`);
+      const metaJson: ApiResponse<RubricSummary> = await metaRes.json();
+      if (!metaJson.success) throw new Error(metaJson.message || 'Failed to update rubric');
+
+      // Step 2: Diff criteria — delete removed, update existing, create new
+      const existingIds = new Set(editRubric.criteria.map((c) => c.id).filter(Boolean));
+      const incomingIds = new Set(data.criteria.map((c) => c.id).filter(Boolean));
+
+      // 2a. Delete criteria that were removed in the editor
+      for (const existing of editRubric.criteria) {
+        if (existing.id && !incomingIds.has(existing.id)) {
+          await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${existing.id}/`, {
+            method: 'DELETE',
+          });
+        }
+      }
+
+      // 2b. Update existing criteria / create new ones
+      for (const criterion of data.criteria) {
+        const payload = {
+          title: criterion.title,
+          description: criterion.description,
+          weight: criterion.weight,
+          levels: criterion.levels,
+        };
+
+        if (criterion.id && existingIds.has(criterion.id)) {
+          // Update existing criterion (PUT accepts title, description, weight, levels)
+          await fetch(
+            `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }
+          );
+        } else {
+          // Create new criterion
+          await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
+
+      // Invalidate cache so updated criteria are refetched on next expand
       setCriteriaCache((prev) => {
         const next = { ...prev };
         delete next[editRubric.id];
