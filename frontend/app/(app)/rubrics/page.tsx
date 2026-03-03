@@ -593,7 +593,7 @@ export default function RubricsPage() {
                                     <div className="flex items-center gap-2">
                                       <input
                                         autoFocus
-                                        className="flex-1 text-xs border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
+                                        className="flex-1 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
                                         placeholder="Level title"
                                         value={editingLevel.data.level_title}
                                         onChange={(e) =>
@@ -606,7 +606,7 @@ export default function RubricsPage() {
                                       <input
                                         type="number"
                                         min={0}
-                                        className="w-14 text-xs border-b border-indigo-400 bg-transparent focus:outline-none text-right"
+                                        className="w-14 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none text-right"
                                         value={editingLevel.data.score_points}
                                         onChange={(e) =>
                                           setEditingLevel({
@@ -642,7 +642,7 @@ export default function RubricsPage() {
                                     </div>
                                     <textarea
                                       rows={2}
-                                      className="w-full text-xs border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
+                                      className="w-full text-xs text-gray-900 border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
                                       placeholder="Level description (optional)"
                                       value={editingLevel.data.level_description}
                                       onChange={(e) =>
@@ -720,7 +720,7 @@ export default function RubricsPage() {
                                 <div className="flex items-center gap-2">
                                   <input
                                     autoFocus
-                                    className="flex-1 text-xs border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
+                                    className="flex-1 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
                                     placeholder="Level title (required)"
                                     value={addingLevel.data.level_title}
                                     onChange={(e) =>
@@ -733,7 +733,7 @@ export default function RubricsPage() {
                                   <input
                                     type="number"
                                     min={0}
-                                    className="w-14 text-xs border-b border-indigo-400 bg-transparent focus:outline-none text-right"
+                                    className="w-14 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none text-right"
                                     value={addingLevel.data.score_points}
                                     onChange={(e) =>
                                       setAddingLevel({
@@ -769,7 +769,7 @@ export default function RubricsPage() {
                                 </div>
                                 <textarea
                                   rows={2}
-                                  className="w-full text-xs border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
+                                  className="w-full text-xs text-gray-900 border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
                                   placeholder="Level description (optional)"
                                   value={addingLevel.data.level_description}
                                   onChange={(e) =>
