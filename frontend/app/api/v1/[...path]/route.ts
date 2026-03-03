@@ -25,12 +25,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   // DELETE, GET, HEAD, OPTIONS must NOT have `body` or `duplex` in the options
   // object at all — Node 18 (undici) throws TypeError: fetch failed when
   // `duplex: 'half'` is present even if `body` is undefined.
-  //
-  // redirect: 'follow' is safe here because:
-  //  - The proxy already adds a trailing slash (line above), so FastAPI won't 307.
-  //  - On the rare case of a follow, undici re-uses the same fetchOptions object.
-  //    Since DELETE/GET have no body/duplex, the re-sent request is clean.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+
+  // Read the body eagerly as text so we never pass a partially-consumed
+  // ReadableStream to the upstream fetch — that causes a TypeError in undici
+  // even when duplex:'half' is set.
+  const bodyText = hasBody ? await req.text() : undefined;
 
   type FetchOpts = RequestInit & { duplex?: string };
 
@@ -40,12 +40,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       'Content-Type': req.headers.get('content-type') ?? 'application/json',
     },
     redirect: 'follow',
-    ...(hasBody
-      ? {
-          body: req.body as BodyInit,
-          duplex: 'half', // required for streaming body passthrough in Node 18+
-        }
-      : {}),
+    ...(hasBody ? { body: bodyText } : {}),
   };
 
   let upstream: Response;
