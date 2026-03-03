@@ -347,7 +347,7 @@ export default function RubricsPage() {
     try {
       const { rubricId, criterionId, levelId, data } = editingLevel;
       const res = await fetch(
-        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/${levelId}/`,
+        `${apiUrl}/api/v1/rubrics/criteria/${criterionId}/levels/${levelId}/`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -375,7 +375,7 @@ export default function RubricsPage() {
     setActionError(null);
     try {
       const res = await fetch(
-        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/${levelId}/`,
+        `${apiUrl}/api/v1/rubrics/criteria/${criterionId}/levels/${levelId}/`,
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error(`Failed to delete level (${res.status})`);
@@ -398,7 +398,7 @@ export default function RubricsPage() {
     try {
       const { rubricId, criterionId, data } = addingLevel;
       const res = await fetch(
-        `${apiUrl}/api/v1/rubrics/${rubricId}/criteria/${criterionId}/levels/`,
+        `${apiUrl}/api/v1/rubrics/criteria/${criterionId}/levels/`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
