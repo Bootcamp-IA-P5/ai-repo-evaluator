@@ -1,44 +1,15 @@
 import os
+import re
 import json
 import shutil
 import tempfile
 from core.logging_config import logger
+from core.settings import settings
 from git import Repo
 from langchain_community.document_loaders.generic import GenericLoader
 from langchain_community.document_loaders.parsers import LanguageParser
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-
-# ──────────────────────────────────────────────────────────────────────
-# Supported file type configuration
-# ──────────────────────────────────────────────────────────────────────
-
-# Source code files → processed by LanguageParser (understands classes, functions)
-CODE_SUFFIXES = [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".rb", ".go", ".php", ".mjs"]
-
-# Text/documentation files → read as plain text
-TEXT_SUFFIXES = [".md", ".txt", ".rst", ".html", ".css", ".sh", ".bat", ".ps1"]
-
-# Configuration/data files → read as plain text
-CONFIG_SUFFIXES = [".json", ".yml", ".yaml", ".toml", ".ini", ".cfg",
-                   ".env.example", ".sql"]
-
-# Special files without extension that we want to include
-SPECIAL_FILES = {"Dockerfile", "Makefile", "Procfile", "Gemfile",
-                 ".gitignore", ".dockerignore"}
-
-# Files/directories to always ignore
-IGNORE_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv",
-               ".tox", ".mypy_cache", ".pytest_cache", "dist", "build"}
-
-# Generated/lock files to always ignore (large and not useful for analysis)
-IGNORE_FILES = {"package-lock.json", "yarn.lock", "poetry.lock",
-                "Pipfile.lock", "composer.lock", "pnpm-lock.yaml",
-                ".DS_Store"}
-
-# Maximum file size to read (bytes) — prevents loading huge generated files
-MAX_FILE_SIZE = 50_000  # ~50KB
 
 
 class GitLoaderService:
@@ -62,18 +33,29 @@ class GitLoaderService:
 
         The clone is automatically deleted when finished (or on error).
         """
-        # Validate GitHub URL
-        if not repo_url.startswith(("https://github.com/", "git@github.com:")):
-            raise ValueError("Only public GitHub repositories are supported")
+        # Validate GitHub URL — HTTPS only for public repos
+        github_pattern = re.compile(
+            r"^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\.git)?$"
+        )
+        if not github_pattern.match(repo_url):
+            raise ValueError(
+                "Invalid repository URL. Only public GitHub HTTPS URLs are supported "
+                "(e.g. https://github.com/owner/repo)"
+            )
 
         target_dir = tempfile.mkdtemp(prefix="repo_clone_")
 
         try:
-            # 1. Clone the repository
+            # 1. Shallow clone — only latest snapshot, no history needed for RAG
             try:
-                Repo.clone_from(repo_url, target_dir)
+                Repo.clone_from(
+                    repo_url,
+                    target_dir,
+                    depth=1,
+                    single_branch=True,
+                )
             except Exception as e:
-                raise Exception(f"Error cloning repository: {str(e)}")
+                raise RuntimeError(f"Error cloning repository: {str(e)}") from e
 
             # 2. Load files by type
             all_documents = []
@@ -133,18 +115,19 @@ class GitLoaderService:
         Uses os.walk to respect IGNORE_DIRS (e.g. node_modules)
         before passing files to LanguageParser.
         """
-        code_suffixes_set = set(CODE_SUFFIXES)
+        code_suffixes_set = set(settings.CODE_SUFFIXES)
         documents = []
 
         for root, dirs, files in os.walk(repo_dir):
             # Skip ignored directories
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if d not in settings.IGNORE_DIRS]
 
             for filename in files:
                 _, ext = os.path.splitext(filename)
-                if ext.lower() not in code_suffixes_set:
+                ext = ext.lower()
+                if ext not in code_suffixes_set:
                     continue
-                if filename in IGNORE_FILES:
+                if filename in settings.IGNORE_FILES:
                     continue
 
                 filepath = os.path.join(root, filename)
@@ -182,7 +165,7 @@ class GitLoaderService:
 
         for root, dirs, files in os.walk(repo_dir):
             # Skip ignored directories
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if d not in settings.IGNORE_DIRS]
 
             for filename in files:
                 if not filename.endswith(".ipynb"):
@@ -217,7 +200,7 @@ class GitLoaderService:
                             }
                         ))
 
-                except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                except (json.JSONDecodeError, UnicodeDecodeError, OSError) as e:
                     logger.warning(f"Error reading notebook {filepath}: {e}")
 
         return documents
@@ -227,16 +210,16 @@ class GitLoaderService:
         Loads text, configuration and special files.
         Reads them as plain text — no specialized parser needed.
         """
-        valid_suffixes = set(TEXT_SUFFIXES + CONFIG_SUFFIXES)
+        valid_suffixes = set(settings.TEXT_SUFFIXES + settings.CONFIG_SUFFIXES)
         documents = []
 
         for root, dirs, files in os.walk(repo_dir):
             # Skip ignored directories
-            dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+            dirs[:] = [d for d in dirs if d not in settings.IGNORE_DIRS]
 
             for filename in files:
                 # Skip lock/generated files
-                if filename in IGNORE_FILES:
+                if filename in settings.IGNORE_FILES:
                     continue
 
                 filepath = os.path.join(root, filename)
@@ -245,18 +228,24 @@ class GitLoaderService:
                 # Determine if we should process this file
                 _, ext = os.path.splitext(filename)
                 is_valid_ext = ext.lower() in valid_suffixes
-                is_special = filename in SPECIAL_FILES
+                is_special = filename in settings.SPECIAL_FILES
 
                 if not (is_valid_ext or is_special):
                     continue
 
                 # Skip code files (already processed by LanguageParser)
-                if ext.lower() in set(CODE_SUFFIXES):
+                if ext.lower() in set(settings.CODE_SUFFIXES):
+                    continue
+
+                # Skip files larger than MAX_FILE_SIZE
+                file_size = os.path.getsize(filepath)
+                if file_size > settings.MAX_FILE_SIZE:
+                    logger.debug(f"Skipping large file ({file_size} bytes): {rel_path}")
                     continue
 
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
-                        content = f.read(MAX_FILE_SIZE)
+                        content = f.read()
 
                     if not content.strip():
                         continue
@@ -266,7 +255,7 @@ class GitLoaderService:
                         file_type = "documentation"
                     elif ext.lower() == ".sql":
                         file_type = "database_schema"
-                    elif filename in SPECIAL_FILES or ext.lower() in {".yml", ".yaml", ".toml", ".json"}:
+                    elif filename in settings.SPECIAL_FILES or ext.lower() in {".yml", ".yaml", ".toml", ".json"}:
                         file_type = "configuration"
                     else:
                         file_type = "text"
