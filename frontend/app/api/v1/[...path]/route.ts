@@ -22,41 +22,33 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   const target = `${BACKEND_URL}${pathname}${search}`;
 
   // Only POST / PUT / PATCH carry a request body.
-  // For all other methods (GET, DELETE, HEAD, OPTIONS) we must NOT set `body`
-  // or `duplex` — Node 18 fetch throws TypeError when `duplex: 'half'` is
-  // present without a real body stream.
+  // DELETE, GET, HEAD, OPTIONS must NOT have `body` or `duplex` in the options
+  // object at all — Node 18 (undici) throws TypeError: fetch failed when
+  // `duplex: 'half'` is present even if `body` is undefined.
+  //
+  // redirect: 'follow' is safe here because:
+  //  - The proxy already adds a trailing slash (line above), so FastAPI won't 307.
+  //  - On the rare case of a follow, undici re-uses the same fetchOptions object.
+  //    Since DELETE/GET have no body/duplex, the re-sent request is clean.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
-  // Build fetch options conditionally so DELETE never gets body/duplex.
-  // We also do NOT use redirect:'follow' because Node fetch re-sends the original
-  // request (including any problematic options) on 307/308 — instead we handle
-  // the redirect manually so we control the options on the second hop.
-  const fetchOptions: RequestInit & { duplex?: string } = {
+  type FetchOpts = RequestInit & { duplex?: string };
+
+  const fetchOptions: FetchOpts = {
     method: req.method,
     headers: {
       'Content-Type': req.headers.get('content-type') ?? 'application/json',
     },
-    redirect: 'manual', // capture 3xx ourselves
+    redirect: 'follow',
+    ...(hasBody
+      ? {
+          body: req.body as BodyInit,
+          duplex: 'half', // required for streaming body passthrough in Node 18+
+        }
+      : {}),
   };
-  if (hasBody) {
-    fetchOptions.body = req.body as BodyInit;
-    fetchOptions.duplex = 'half'; // required for streaming body in Node 18+
-  }
 
-  let upstream = await fetch(target, fetchOptions);
-
-  // Handle 307 / 308 redirects manually so we keep full control of options.
-  // FastAPI may 307 if the ASGI server applies its own trailing-slash redirect.
-  if (upstream.status === 307 || upstream.status === 308) {
-    const location = upstream.headers.get('location');
-    if (location) {
-      // Resolve relative Location headers against the backend base URL
-      const redirectTarget = location.startsWith('http')
-        ? location
-        : `${BACKEND_URL}${location}`;
-      upstream = await fetch(redirectTarget, fetchOptions);
-    }
-  }
+  const upstream = await fetch(target, fetchOptions);
 
   const contentType = upstream.headers.get('content-type') ?? '';
   const body = await upstream.text();
