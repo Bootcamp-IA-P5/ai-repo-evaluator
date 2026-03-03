@@ -836,7 +836,7 @@ export default function RubricsPage() {
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
           {/* Panel */}
-          <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
+          <div className="relative w-full max-w-5xl h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
             <RubricBuilder
               onSave={handleCreate}
               onClose={() => setCreateOpen(false)}
@@ -853,7 +853,7 @@ export default function RubricsPage() {
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/50" aria-hidden="true" />
           {/* Panel */}
-          <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
+          <div className="relative w-full max-w-5xl h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
             <RubricBuilder
               defaultValue={{
                 title: editRubric.title,
