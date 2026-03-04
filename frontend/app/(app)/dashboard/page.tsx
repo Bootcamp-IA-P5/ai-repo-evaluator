@@ -169,7 +169,7 @@ export default function DashboardPage() {
     <div className="flex flex-col min-h-full bg-gray-50">
       <PageHeader
         title="Dashboard"
-        subtitle="Overview of evaluation activity and recent results"
+        description="Overview of evaluation activity and recent results"
       />
 
       <div className="flex-1 px-6 py-8 space-y-8 max-w-7xl w-full mx-auto">
