@@ -22,6 +22,8 @@ import {
 
 /** Maps to a single cell in the rubric grid (one performance level) */
 export interface RubricLevel {
+  /** Present when hydrated from the API (used for edit diffing). */
+  id?: number;
   level_title: string;
   level_description: string;
   /** Points awarded at this level. Used when use_scores is enabled. */
@@ -30,6 +32,8 @@ export interface RubricLevel {
 
 /** Maps to a single row in the rubric grid (one evaluation criterion) */
 export interface RubricCriterion {
+  /** Present when hydrated from the API (used for edit diffing). */
+  id?: number;
   title: string;
   description: string;
   /**
@@ -132,10 +136,13 @@ const buildPayload = (rubric: InternalRubric): RubricData => ({
   title: rubric.title,
   description: rubric.description,
   criteria: rubric.criteria.map((c) => ({
+    // Preserve id so edit pages can diff existing vs new criteria
+    ...(c.id !== undefined ? { id: c.id } : {}),
     title: c.title,
     description: c.description,
     weight: c.weight,
     levels: c.levels.map((l) => ({
+      ...(l.id !== undefined ? { id: l.id } : {}),
       level_title: l.level_title,
       level_description: l.level_description,
       score_points: l.score_points,
@@ -214,7 +221,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
               }
               className={cn(
                 'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-                'text-sm pb-0.5 bg-transparent'
+                'text-sm pb-0.5 bg-transparent text-gray-900'
               )}
             />
           </div>
@@ -228,7 +235,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           placeholder="Level title"
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-            'text-sm pb-0.5 bg-transparent mb-2 placeholder:text-gray-300'
+            'text-sm pb-0.5 bg-transparent mb-2 text-gray-900 placeholder:text-gray-300'
           )}
         />
 
@@ -240,7 +247,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           rows={3}
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-            'text-sm pb-0.5 bg-transparent resize-none placeholder:text-gray-300'
+            'text-sm pb-0.5 bg-transparent resize-none text-gray-900 placeholder:text-gray-300'
           )}
         />
 
@@ -341,7 +348,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
             placeholder="Criterion title (required)"
             className={cn(
               'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
-              'text-base font-medium pb-1 bg-transparent placeholder:text-gray-300'
+              'text-base font-medium pb-1 bg-transparent text-gray-900 placeholder:text-gray-300'
             )}
           />
           <input
@@ -563,9 +570,9 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col h-full bg-white min-h-screen">
+    <div className="flex flex-col h-full bg-white">
       {/* ── Top header bar ── */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white sticky top-0 z-20 shadow-sm">
+      <header className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white shrink-0 z-20 shadow-sm">
         <div className="flex items-center gap-3">
           {onClose && (
             <button
@@ -593,7 +600,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
       </header>
 
       {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto px-4 py-8 bg-gray-50">
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 py-8 bg-gray-50">
         <div className="max-w-4xl mx-auto space-y-6">
 
           {/* Rubric title + description */}
