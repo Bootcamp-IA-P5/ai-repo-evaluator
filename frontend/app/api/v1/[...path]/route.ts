@@ -16,6 +16,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Override in frontend/.env (or docker-compose env_file) for non-Docker setups.
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://backend:8000';
 
+// Parsed once at module load — used to validate redirect Location headers.
+const BACKEND_ORIGIN = new URL(BACKEND_URL).origin;
+
 // Hop-by-hop headers that must not be forwarded to the upstream service.
 const HOP_BY_HOP = new Set([
   'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
@@ -67,15 +70,27 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     // Follow up to 5 redirect hops manually.
     for (let hop = 0; hop < 5; hop++) {
       upstream = await doFetch(currentUrl);
-      const isRedirect = upstream.status === 301 || upstream.status === 302 ||
-                         upstream.status === 307 || upstream.status === 308;
+
+      // Only follow 307/308: these preserve the original method and body.
+      // 301/302 semantics require switching to GET, which is not what we want
+      // for proxied POST/PUT requests (FastAPI uses 307 for trailing-slash redirects).
+      const isRedirect = upstream.status === 307 || upstream.status === 308;
       if (!isRedirect) break;
 
       const location = upstream.headers.get('location');
       if (!location) break;
 
-      // Location may be relative (e.g. "/api/v1/rubrics/") or absolute.
-      currentUrl = location.startsWith('http') ? location : `${BACKEND_URL}${location}`;
+      // Resolve the Location URL and validate it stays on the same backend origin.
+      // An attacker-controlled Location header could otherwise turn this proxy
+      // into an SSRF primitive that reaches internal services.
+      const resolved = new URL(location, BACKEND_URL);
+      if (resolved.origin !== BACKEND_ORIGIN) break;
+
+      // Cancel the redirect response body to avoid keeping the connection/buffer
+      // alive (resource leak in Node.js/undici under load).
+      await upstream.body?.cancel();
+
+      currentUrl = resolved.toString();
     }
   } catch (err) {
     // Network-level failure (DNS, TCP, etc.) — backend unreachable
