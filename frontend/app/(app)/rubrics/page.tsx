@@ -491,7 +491,7 @@ export default function RubricsPage() {
             const detail = criteriaCache[rubric.id];
 
             return (
-              <Card key={rubric.id} padding="none" className="flex flex-col">
+              <Card key={rubric.id} padding="none" className="flex flex-col self-start w-full">
                 {/* Card body */}
                 <div className="p-5 flex-1">
                   {/* Top row: icon + action buttons */}
