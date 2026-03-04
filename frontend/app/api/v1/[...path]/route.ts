@@ -35,11 +35,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   // Node 18 (undici) throws TypeError when body is present on bodyless methods.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
-  // Pass the raw ReadableStream directly — this avoids the "detached ArrayBuffer"
-  // error that occurs when req.arrayBuffer() is read and then passed to fetch(),
-  // because Node's undici may detach the buffer during the transfer. Streaming
-  // the body also preserves binary payloads (multipart/form-data) without copying.
-  const bodyBuffer = hasBody ? req.body : undefined;
+  // Read the body as an ArrayBuffer and wrap it in Uint8Array.
+  // - Uint8Array prevents the "detached ArrayBuffer" error (undici detaches raw
+  //   ArrayBuffer instances after the first use).
+  // - Having the body fully buffered allows fetch to resend it when the backend
+  //   returns a 307 Temporary Redirect (streams can only be read once).
+  const bodyBuffer = hasBody ? new Uint8Array(await req.arrayBuffer()) : undefined;
 
   // Forward all original request headers except hop-by-hop ones.
   const forwardHeaders: Record<string, string> = {};
@@ -49,12 +50,11 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     }
   });
 
-  const fetchOptions: RequestInit & { duplex?: string } = {
+  const fetchOptions: RequestInit = {
     method: req.method,
     headers: forwardHeaders,
     redirect: 'follow',
-    // Node.js requires duplex:'half' when the body is a ReadableStream.
-    ...(hasBody ? { body: bodyBuffer, duplex: 'half' } : {}),
+    ...(hasBody ? { body: bodyBuffer } : {}),
   };
 
   let upstream: Response;
