@@ -3,44 +3,56 @@ import { NextRequest, NextResponse } from 'next/server';
 /**
  * Proxy all /api/v1/* requests to the FastAPI backend.
  *
- * Using a Route Handler instead of next.config.ts rewrites because:
- * - Turbopack (dev mode) does not respect skipTrailingSlashRedirect reliably.
- * - When rewrites follow a 307 from the backend, Next.js forwards the raw
- *   Location header (http://backend:8000/...) to the browser, which can't
- *   resolve the Docker-internal hostname → CORS/ERR_NAME_NOT_RESOLVED.
+ * Using a Route Handler (app/api/v1/[...path]/route.ts) instead of
+ * next.config.ts rewrites because Turbopack doesn't honour rewrites reliably
+ * in dev mode, and rewrite-based proxying leaks the Docker-internal hostname
+ * (http://backend:8000) to the browser via Location headers.
  *
- * This handler follows redirects server-side so the browser only ever
- * talks to localhost:3000.
+ * This handler runs server-side so the browser only ever talks to
+ * localhost:3000.
  */
 
-const BACKEND_URL = 'http://backend:8000';
+// Server-side only env var — never exposed to the browser bundle.
+// Override in frontend/.env (or docker-compose env_file) for non-Docker setups.
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://backend:8000';
+
+// Hop-by-hop headers that must not be forwarded to the upstream service.
+const HOP_BY_HOP = new Set([
+  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+  'te', 'trailers', 'transfer-encoding', 'upgrade',
+  // 'host' must be omitted so the backend sees its own hostname, not localhost:3000
+  'host',
+]);
 
 async function handler(req: NextRequest): Promise<NextResponse> {
-  // Build the target URL — always add trailing slash so FastAPI doesn't 307
-  const pathname = req.nextUrl.pathname.replace(/\/?$/, '/'); // ensure trailing /
-  const search = req.nextUrl.search;                          // e.g. ?limit=10
+  // Forward the path as-is — redirect:'follow' handles any 307 the backend emits.
+  const pathname = req.nextUrl.pathname;
+  const search = req.nextUrl.search; // e.g. ?limit=10
   const target = `${BACKEND_URL}${pathname}${search}`;
 
   // Only POST / PUT / PATCH carry a request body.
-  // DELETE, GET, HEAD, OPTIONS must NOT have `body` or `duplex` in the options
-  // object at all — Node 18 (undici) throws TypeError: fetch failed when
-  // `duplex: 'half'` is present even if `body` is undefined.
+  // DELETE / GET / HEAD / OPTIONS must NOT have a body in the options object —
+  // Node 18 (undici) throws TypeError when body is present on bodyless methods.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
-  // Read the body eagerly as text so we never pass a partially-consumed
-  // ReadableStream to the upstream fetch — that causes a TypeError in undici
-  // even when duplex:'half' is set.
-  const bodyText = hasBody ? await req.text() : undefined;
+  // Read the body as an ArrayBuffer so binary payloads (multipart/form-data for
+  // file uploads) are preserved exactly. A plain string would corrupt non-UTF-8
+  // byte sequences in multipart boundaries.
+  const bodyBuffer = hasBody ? await req.arrayBuffer() : undefined;
 
-  type FetchOpts = RequestInit & { duplex?: string };
+  // Forward all original request headers except hop-by-hop ones.
+  const forwardHeaders: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    if (!HOP_BY_HOP.has(key.toLowerCase())) {
+      forwardHeaders[key] = value;
+    }
+  });
 
-  const fetchOptions: FetchOpts = {
+  const fetchOptions: RequestInit = {
     method: req.method,
-    headers: {
-      'Content-Type': req.headers.get('content-type') ?? 'application/json',
-    },
+    headers: forwardHeaders,
     redirect: 'follow',
-    ...(hasBody ? { body: bodyText } : {}),
+    ...(hasBody ? { body: bodyBuffer } : {}),
   };
 
   let upstream: Response;

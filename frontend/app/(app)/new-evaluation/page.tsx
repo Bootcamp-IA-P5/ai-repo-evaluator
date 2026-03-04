@@ -94,6 +94,11 @@ export default function NewEvaluationPage() {
         return res.json();
       })
       .then((json: { success: boolean; data: RubricOption[] }) => {
+        if (!json.success) {
+          setRubricsError(true);
+          setRubricsLoading(false);
+          return;
+        }
         setRubrics(json.data ?? []);
         setRubricsLoading(false);
       })

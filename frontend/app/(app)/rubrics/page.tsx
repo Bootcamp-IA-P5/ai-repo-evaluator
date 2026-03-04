@@ -71,8 +71,8 @@ function formatDate(dateStr: string): string {
 // ---------------------------------------------------------------------------
 
 export default function RubricsPage() {
-  // Use relative URLs so the Next.js proxy rewrite handles routing to the backend.
-  // This avoids CORS issues regardless of the NEXT_PUBLIC_API_URL value.
+  // Use relative URLs so requests are handled by the Next.js Route Handler
+  // (app/api/v1/[...path]/route.ts), which proxies them server-side to the backend.
   const apiUrl = '';
 
   // Rubric list
@@ -253,9 +253,10 @@ export default function RubricsPage() {
       // 2a. Delete criteria that were removed in the editor
       for (const existing of editRubric.criteria) {
         if (existing.id && !incomingIds.has(existing.id)) {
-          await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${existing.id}/`, {
+          const delRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${existing.id}/`, {
             method: 'DELETE',
           });
+          if (!delRes.ok) throw new Error(`Failed to delete criterion (${delRes.status})`);
         }
       }
 
@@ -270,7 +271,7 @@ export default function RubricsPage() {
 
         if (criterion.id && existingIds.has(criterion.id)) {
           // Update existing criterion (PUT accepts title, description, weight, levels)
-          await fetch(
+          const putRes = await fetch(
             `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
             {
               method: 'PUT',
@@ -278,13 +279,15 @@ export default function RubricsPage() {
               body: JSON.stringify(payload),
             }
           );
+          if (!putRes.ok) throw new Error(`Failed to update criterion (${putRes.status})`);
         } else {
           // Create new criterion
-          await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
+          const postRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
+          if (!postRes.ok) throw new Error(`Failed to create criterion (${postRes.status})`);
         }
       }
 
