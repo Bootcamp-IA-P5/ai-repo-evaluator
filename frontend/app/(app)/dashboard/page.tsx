@@ -384,7 +384,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── CTA banner ──────────────────────────────────────────────────── */}
-        <div className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <p className="text-white font-semibold text-lg">
               Ready to evaluate a new project?
