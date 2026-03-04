@@ -58,11 +58,9 @@ class Settings(BaseSettings):
                          "Pipfile.lock", "composer.lock", "pnpm-lock.yaml", ".DS_Store"}
     MAX_FILE_SIZE: int = 50_000  # ~50KB
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore",  # Ignore extra environment variables
-    )
-
+    class Config:
+        env_file = ".env"
+        extra = "ignore"  # Ignore extra environment variables
 
 # Global settings instance
 settings = Settings()

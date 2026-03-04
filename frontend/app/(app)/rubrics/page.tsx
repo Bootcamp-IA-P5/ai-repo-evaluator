@@ -718,7 +718,7 @@ export default function RubricsPage() {
                             })}
 
                             {/* Add level form / button — POST /criteria/{cid}/levels/ */}
-                            {addingLevel?.criterionId === criterion.id ? (
+                            {addingLevel && addingLevel.criterionId === criterion.id ? (
                               <div className="rounded-md border border-indigo-300 bg-indigo-50 p-2 space-y-1.5 mt-1">
                                 <div className="flex items-center gap-2">
                                   <input
