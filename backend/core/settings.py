@@ -61,11 +61,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "ignore"  # Ignore extra environment variables
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore",  # Ignore extra environment variables
-    )
-
 
 # Global settings instance
 settings = Settings()
