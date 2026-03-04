@@ -484,14 +484,14 @@ export default function RubricsPage() {
         </div>
       ) : (
         /* Rubric card grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
           {rubrics.map((rubric) => {
             const isExpanded = expandedId === rubric.id;
             const isLoadingCriteria = criteriaLoading === rubric.id;
             const detail = criteriaCache[rubric.id];
 
             return (
-              <Card key={rubric.id} padding="none" className="flex flex-col">
+              <Card key={rubric.id} padding="none" className="flex flex-col self-start w-full">
                 {/* Card body */}
                 <div className="p-5 flex-1">
                   {/* Top row: icon + action buttons */}
