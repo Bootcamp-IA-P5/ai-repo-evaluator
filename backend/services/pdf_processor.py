@@ -1,12 +1,10 @@
-import logging
 import os
 import re
+from core.logging_config import logger
 
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-
-logger = logging.getLogger(__name__)
 
 class BriefingProcessor:
     """
@@ -35,9 +33,12 @@ class BriefingProcessor:
         text = re.sub(r" {2,}", " ", text)
         return text.strip()
 
-    def process(self) -> list[dict]:
+    def process(self) -> list[Document]:
         """
         Runs text extraction, cleaning, and chunking.
+
+        Returns:
+            List of langchain Document objects ready for FAISS indexing.
         """
         try:
             # Ingestion: Load the briefing PDF
@@ -64,16 +65,17 @@ class BriefingProcessor:
             chunks = text_splitter.split_text(full_text)
             
             # RAG structuring:
-            # Build document objects with metadata for traceability.
+            # Build langchain Document objects with metadata for traceability.
+            # We use Document instead of plain dicts for FAISS compatibility.
             documents = [
-                {
-                    "page_content": chunk,
-                    "metadata": {
+                Document(
+                    page_content=chunk,
+                    metadata={
                         "source": "project_briefing",
                         "type": "requirement",
-                        "chunk_index": i
-                    }
-                }
+                        "chunk_index": i,
+                    },
+                )
                 for i, chunk in enumerate(chunks)
             ]
 
