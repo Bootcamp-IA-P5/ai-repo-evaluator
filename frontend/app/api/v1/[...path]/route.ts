@@ -49,11 +49,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
     }
   });
 
-  const fetchOptions: RequestInit = {
+  const fetchOptions: RequestInit & { duplex?: string } = {
     method: req.method,
     headers: forwardHeaders,
     redirect: 'follow',
-    ...(hasBody ? { body: bodyBuffer } : {}),
+    // Node.js requires duplex:'half' when the body is a ReadableStream.
+    ...(hasBody ? { body: bodyBuffer, duplex: 'half' } : {}),
   };
 
   let upstream: Response;
