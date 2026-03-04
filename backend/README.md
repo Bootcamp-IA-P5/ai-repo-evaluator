@@ -10,15 +10,20 @@ FastAPI backend for AI-powered GitHub repository evaluation using RAG (Retrieval
 ├─────────────────────────────────────────────────────────────────┤
 │  Routers (API Endpoints)                                        │
 │  ├── /rubrics → Rubric CRUD operations                          │
+│  ├── /evaluations → Evaluation CRUD & processing                │
 │  └── /health → System health checks                             │
 ├─────────────────────────────────────────────────────────────────┤
 │  Services (Business Logic)                                      │
-│  └── RubricServiceAPI → Handles rubric operations               │
+│  ├── RubricServiceAPI → Handles rubric operations               │
+│  ├── EvaluationServiceAPI → Handles evaluation operations       │
+│  └── pdf_processor → PDF text extraction for RAG                │
 ├─────────────────────────────────────────────────────────────────┤
 │  Schemas (Pydantic Validation)                                  │
 │  ├── RubricResponse, RubricResponseWithCriteria                 │
 │  ├── CriterionResponse, CriterionResponseWithLevels             │
-│  └── LevelResponse, APIResponse                                 │
+│  ├── LevelResponse, APIResponse                                 │
+│  ├── EvaluationRequest, EvaluationResponse                      │
+│  └── EvaluationResponseWithFindings, FindingResponse            │
 ├─────────────────────────────────────────────────────────────────┤
 │  Models (SQLAlchemy ORM)                                        │
 │  ├── Rubric Architecture: Rubric → Criterion → Level            │
@@ -28,7 +33,8 @@ FastAPI backend for AI-powered GitHub repository evaluation using RAG (Retrieval
 │  ├── database.py → PostgreSQL connection                        │
 │  ├── settings.py → Configuration management                     │
 │  ├── logging_config.py → Colored logging                        │
-│  └── exception_handlers.py → Error handling                     │
+│  ├── exception_handlers.py → Error handling                     │
+│  └── messages.py → Centralized message strings                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,23 +77,27 @@ backend/
 │
 ├── routers/                # API route definitions
 │   ├── __init__.py
-│   └── rubrics.py          # Rubric endpoints
+│   ├── rubrics.py          # Rubric endpoints
+│   └── evaluations.py      # Evaluation endpoints
 │
 ├── schemas/                # Pydantic validation schemas
 │   ├── __init__.py
 │   ├── response.py         # APIResponse wrapper schema
-│   └── rubric.py           # Rubric-related schemas
+│   ├── rubric.py           # Rubric-related schemas
+│   └── evaluation.py       # Evaluation-related schemas
 │
 ├── services/               # Business logic layer
 │   ├── __init__.py
 │   ├── rubric_service_api.py    # Rubric CRUD operations
+│   ├── evaluation_service_api.py # Evaluation CRUD operations
 │   └── pdf_processor.py    # PDF processing utilities
 │
 └── tests/                  # Test suite
     ├── __init__.py
     ├── conftest.py         # pytest fixtures
     └── services/           # Service-level tests
-        └── test_rubric_service_api.py
+        ├── test_rubric_service_api.py
+        └── test_evaluation_service_api.py
 ```
 
 ## 🗄️ Database Schema
@@ -146,6 +156,17 @@ backend/
 |--------|----------|-------------|
 | GET | `/api/v1/rubrics` | List all rubrics (without criteria) |
 | GET | `/api/v1/rubrics/{rubric_id}` | Get rubric by ID with full details |
+| POST | `/api/v1/rubrics` | Create a new rubric with criteria and levels |
+| PUT | `/api/v1/rubrics/{rubric_id}` | Update a rubric's basic information |
+| DELETE | `/api/v1/rubrics/{rubric_id}` | Delete a rubric |
+
+### Evaluation Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/evaluations` | List all evaluations (without findings) |
+| GET | `/api/v1/evaluations/{evaluation_id}` | Get evaluation by ID with full findings |
+| POST | `/api/v1/evaluations` | Create a new evaluation (async processing) |
 
 ### Response Format
 
@@ -259,7 +280,8 @@ tests/
 │   └── rubric_service             # Service instance
 │
 └── services/
-    └── test_rubric_service_api.py # RubricServiceAPI tests
+    ├── test_rubric_service_api.py     # RubricServiceAPI tests
+    └── test_evaluation_service_api.py # EvaluationServiceAPI tests
 ```
 
 ### Test Database

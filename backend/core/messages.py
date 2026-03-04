@@ -61,7 +61,7 @@ class Messages:
         NOT_FOUND_DETAIL = "Finding with id {id} not found"
 
     class Criterion:
-        """Criterion-related messages (for future use)."""
+        """Criterion-related messages."""
 
         LIST_RETRIEVED = "Criteria retrieved successfully"
         LIST_RETRIEVE_FAILED = "Failed to retrieve criteria"
@@ -69,9 +69,15 @@ class Messages:
         RETRIEVE_FAILED = "Failed to retrieve criterion"
         NOT_FOUND = "Criterion not found"
         NOT_FOUND_DETAIL = "Criterion with id {id} not found"
+        CREATED = "Criterion created successfully"
+        CREATE_FAILED = "Failed to create criterion"
+        UPDATED = "Criterion updated successfully"
+        UPDATE_FAILED = "Failed to update criterion"
+        DELETED = "Criterion deleted successfully"
+        DELETE_FAILED = "Failed to delete criterion"
 
     class Level:
-        """Level-related messages (for future use)."""
+        """Level-related messages."""
 
         LIST_RETRIEVED = "Levels retrieved successfully"
         LIST_RETRIEVE_FAILED = "Failed to retrieve levels"
@@ -79,6 +85,12 @@ class Messages:
         RETRIEVE_FAILED = "Failed to retrieve level"
         NOT_FOUND = "Level not found"
         NOT_FOUND_DETAIL = "Level with id {id} not found"
+        CREATED = "Level created successfully"
+        CREATE_FAILED = "Failed to create level"
+        UPDATED = "Level updated successfully"
+        UPDATE_FAILED = "Failed to update level"
+        DELETED = "Level deleted successfully"
+        DELETE_FAILED = "Failed to delete level"
 
     class Generic:
         """Generic reusable messages with placeholders."""

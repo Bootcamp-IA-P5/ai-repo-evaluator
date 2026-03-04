@@ -7,7 +7,7 @@ This module provides centralized configuration management with:
 - Sensible defaults for all values
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         extra = "ignore"  # Ignore extra environment variables
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",  # Ignore extra environment variables
+    )
 
 
 # Global settings instance

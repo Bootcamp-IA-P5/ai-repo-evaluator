@@ -7,7 +7,7 @@ including request/response schemas for the evaluation lifecycle.
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # =============================================================================
@@ -64,6 +64,8 @@ class EvaluationResponse(BaseModel):
         created_at: Timestamp of evaluation creation
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     rubric_id: int
     repo_url: str
@@ -71,9 +73,6 @@ class EvaluationResponse(BaseModel):
     total_score: Optional[float] = None
     ai_summary: Optional[str] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class EvaluationResponseWithFindings(BaseModel):
@@ -94,6 +93,8 @@ class EvaluationResponseWithFindings(BaseModel):
         findings: List of individual criterion findings (empty until completed)
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     rubric_id: int
     repo_url: str
@@ -102,9 +103,6 @@ class EvaluationResponseWithFindings(BaseModel):
     ai_summary: Optional[str] = None
     created_at: datetime
     findings: List["FindingResponse"] = []
-
-    class Config:
-        from_attributes = True
 
 
 class FindingResponse(BaseModel):
@@ -122,15 +120,14 @@ class FindingResponse(BaseModel):
         improvement_suggestion: Recommended action for improvement
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     criterion_id: int
     selected_level_id: Optional[int] = None
     file_path: Optional[str] = None
     evidence_snippet: Optional[str] = None
     improvement_suggestion: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 # Update forward references
