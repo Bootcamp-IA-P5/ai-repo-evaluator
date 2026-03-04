@@ -35,10 +35,11 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   // Node 18 (undici) throws TypeError when body is present on bodyless methods.
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
 
-  // Read the body as an ArrayBuffer so binary payloads (multipart/form-data for
-  // file uploads) are preserved exactly. A plain string would corrupt non-UTF-8
-  // byte sequences in multipart boundaries.
-  const bodyBuffer = hasBody ? await req.arrayBuffer() : undefined;
+  // Pass the raw ReadableStream directly — this avoids the "detached ArrayBuffer"
+  // error that occurs when req.arrayBuffer() is read and then passed to fetch(),
+  // because Node's undici may detach the buffer during the transfer. Streaming
+  // the body also preserves binary payloads (multipart/form-data) without copying.
+  const bodyBuffer = hasBody ? req.body : undefined;
 
   // Forward all original request headers except hop-by-hop ones.
   const forwardHeaders: Record<string, string> = {};
