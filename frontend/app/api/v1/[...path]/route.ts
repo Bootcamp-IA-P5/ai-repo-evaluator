@@ -25,8 +25,11 @@ const HOP_BY_HOP = new Set([
 ]);
 
 async function handler(req: NextRequest): Promise<NextResponse> {
-  // Forward the path as-is — redirect:'follow' handles any 307 the backend emits.
-  const pathname = req.nextUrl.pathname;
+  // Strip trailing slash (except root "/") to avoid FastAPI's 307 redirect.
+  // FastAPI by default redirects /foo/ → /foo, and following a 307 with a body
+  // causes undici to detach the ArrayBuffer, crashing the proxy.
+  const rawPathname = req.nextUrl.pathname;
+  const pathname = rawPathname.length > 1 ? rawPathname.replace(/\/+$/, '') : rawPathname;
   const search = req.nextUrl.search; // e.g. ?limit=10
   const target = `${BACKEND_URL}${pathname}${search}`;
 
