@@ -205,6 +205,44 @@ export default function EvaluationDetailPage() {
     return () => { cancelled = true; };
   }, [evalId]);
 
+  // -- Poll for status changes while evaluation is in-flight ----------------
+  // Activates only when status is pending/processing; stops when settled.
+  const POLL_INTERVAL_MS = 5_000;
+
+  useEffect(() => {
+    const isActive =
+      evaluation?.status === 'pending' || evaluation?.status === 'processing';
+    if (!isActive || loading) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/evaluations/${evalId}`);
+        if (!res.ok) return;
+        const json: ApiResponse<EvaluationDetail> = await res.json();
+        if (!json.success) return;
+
+        const updated = json.data;
+        setEvaluation(updated);
+
+        // When the evaluation just completed, fetch the rubric so criterion
+        // and level names resolve correctly in the findings section.
+        if (updated.status === 'completed' && !rubric) {
+          const rubricRes = await fetch(`/api/v1/rubrics/${updated.rubric_id}`);
+          if (rubricRes.ok) {
+            const rubricJson: ApiResponse<RubricDetail> = await rubricRes.json();
+            if (rubricJson.success) setRubric(rubricJson.data);
+          }
+        }
+      } catch {
+        // Silently ignore polling errors — non-critical background update.
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  // Re-evaluate on every status change or when loading flips.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evaluation?.status, evalId, loading]);
+
   // -- Loading skeleton ------------------------------------------------------
   if (loading) {
     return (
@@ -348,8 +386,8 @@ export default function EvaluationDetailPage() {
               Evaluation in progress
             </p>
             <p className="text-sm text-blue-700 mt-0.5">
-              The AI is currently analysing the repository. Findings will appear here once
-              the evaluation is complete. Refresh the page to check for updates.
+              The AI is currently analysing the repository. Findings will appear here
+              automatically once the evaluation is complete.
             </p>
           </div>
         </div>
