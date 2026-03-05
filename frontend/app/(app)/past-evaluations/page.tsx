@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   FileText,
@@ -130,9 +130,10 @@ export default function PastEvaluationsPage() {
   const [selectedRubric,  setSelectedRubric]  = useState('all');
   const [selectedStatus,  setSelectedStatus]  = useState('all');
 
-  // ── Server origin (works both on server and browser) ──────────────────────
-  const apiUrl =
-    typeof window !== 'undefined' ? window.location.origin : '';
+  // Use relative paths — this is a client-only component ('use client') so
+  // all fetches happen in the browser where relative URLs resolve correctly.
+  // Consistent with rubrics/page.tsx and dashboard/page.tsx.
+  const apiUrl = '';
 
   // ── Fetch both resources in parallel on mount ─────────────────────────────
   useEffect(() => {
@@ -181,20 +182,30 @@ export default function PastEvaluationsPage() {
     return () => { cancelled = true; };
   }, [apiUrl]);
 
+  // ── Keep a ref to the current evaluations list ───────────────────────────
+  // Used inside the polling interval so we can check for active statuses
+  // without adding `evaluations` to the effect’s dependency array.
+  // Without this, every setEvaluations() call would restart the 5-second
+  // countdown (interval teardown + setup on each response).
+  const evaluationsRef = useRef<EvaluationResponse[]>([]);
+  useEffect(() => { evaluationsRef.current = evaluations; }, [evaluations]);
+
   // ── Poll for pending / processing evaluations every 5 s ───────────────────
-  // Only activates when at least one evaluation is still in-flight.
-  // Stops automatically once all transitions to 'completed' or 'failed'.
+  // Starts once after the initial load completes. The interval checks the ref
+  // on each tick and skips the fetch when no evaluation is still in-flight.
   const POLL_INTERVAL_MS = 5_000;
 
   useEffect(() => {
-    const hasActive = evaluations.some(
-      (e) => e.status === 'pending' || e.status === 'processing',
-    );
-    // Do not start a new interval while the initial load is still running,
-    // or when no evaluation is in an active state.
-    if (!hasActive || loading) return;
+    // Do not start polling while the initial load is still running.
+    if (loading) return;
 
     const interval = setInterval(async () => {
+      // Check the ref — no dependency on `evaluations` state needed.
+      const hasActive = evaluationsRef.current.some(
+        (e) => e.status === 'pending' || e.status === 'processing',
+      );
+      if (!hasActive) return;
+
       try {
         const res = await fetch(`${apiUrl}/api/v1/evaluations/`);
         if (!res.ok) return;
@@ -203,7 +214,7 @@ export default function PastEvaluationsPage() {
 
         // Merge incoming data into the existing list:
         // - Replace changed entries in-place (preserves order)
-        // - Append any brand-new evaluations that weren't there before
+        // - Append any brand-new evaluations that weren’t there before
         setEvaluations((prev) => {
           const incoming = Object.fromEntries(json.data.map((e) => [e.id, e]));
           const prevIds  = new Set(prev.map((e) => e.id));
@@ -219,9 +230,9 @@ export default function PastEvaluationsPage() {
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  // Re-evaluate whether to poll whenever the list or loading flag changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evaluations, apiUrl, loading]);
+  // Only restart the interval when the initial load flag flips (true → false).
+  // `evaluations` is intentionally omitted — read via ref to avoid reset loop.
+  }, [loading, apiUrl]);
 
   // ── Derived: rubric lookup map ─────────────────────────────────────────────
   const rubricMap = useMemo(
