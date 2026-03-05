@@ -10,6 +10,7 @@ import {
   Search,
   Filter,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/layout';
 import { StatCard } from '@/components/ui/StatCard';
@@ -179,6 +180,48 @@ export default function PastEvaluationsPage() {
     loadData();
     return () => { cancelled = true; };
   }, [apiUrl]);
+
+  // ── Poll for pending / processing evaluations every 5 s ───────────────────
+  // Only activates when at least one evaluation is still in-flight.
+  // Stops automatically once all transitions to 'completed' or 'failed'.
+  const POLL_INTERVAL_MS = 5_000;
+
+  useEffect(() => {
+    const hasActive = evaluations.some(
+      (e) => e.status === 'pending' || e.status === 'processing',
+    );
+    // Do not start a new interval while the initial load is still running,
+    // or when no evaluation is in an active state.
+    if (!hasActive || loading) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${apiUrl}/api/v1/evaluations/`);
+        if (!res.ok) return;
+        const json: ApiResponse<EvaluationResponse[]> = await res.json();
+        if (!json.success) return;
+
+        // Merge incoming data into the existing list:
+        // - Replace changed entries in-place (preserves order)
+        // - Append any brand-new evaluations that weren't there before
+        setEvaluations((prev) => {
+          const incoming = Object.fromEntries(json.data.map((e) => [e.id, e]));
+          const prevIds  = new Set(prev.map((e) => e.id));
+          const merged   = prev.map((e) => incoming[e.id] ?? e);
+          const added    = json.data.filter((e) => !prevIds.has(e.id));
+          return [...merged, ...added].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          );
+        });
+      } catch {
+        // Silently ignore polling errors — non-critical background update.
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  // Re-evaluate whether to poll whenever the list or loading flag changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evaluations, apiUrl, loading]);
 
   // ── Derived: rubric lookup map ─────────────────────────────────────────────
   const rubricMap = useMemo(
@@ -360,7 +403,16 @@ export default function PastEvaluationsPage() {
           {/* Table header row */}
           <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between">
             <div>
-              <p className="text-base font-semibold text-gray-900">Evaluation History</p>
+              <div className="flex items-center gap-2">
+                <p className="text-base font-semibold text-gray-900">Evaluation History</p>
+                {/* Live indicator — shown while any evaluation is still running */}
+                {!loading && evaluations.some((e) => e.status === 'pending' || e.status === 'processing') && (
+                  <span className="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Live
+                  </span>
+                )}
+              </div>
               {!loading && (
                 <p className="text-xs text-gray-500 mt-0.5">
                   Showing {filtered.length} of {evaluations.length} evaluation{evaluations.length !== 1 ? 's' : ''}
