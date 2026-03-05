@@ -305,16 +305,16 @@ export default function DashboardPage() {
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       Repository
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">
                       Rubric
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Score
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -329,20 +329,31 @@ export default function DashboardPage() {
                       className="hover:bg-gray-50 transition-colors"
                     >
                       {/* Repository */}
-                      <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="truncate max-w-xs">
-                          {shortRepo(ev.repo_url)}
-                        </span>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="font-medium text-gray-900 truncate max-w-xs">
+                            {shortRepo(ev.repo_url)}
+                          </span>
+                        </div>
+                        {/* On mobile show rubric + status below the repo name */}
+                        <div className="mt-1 flex items-center gap-2 md:hidden">
+                          <span className="text-xs text-gray-500 truncate">
+                            {rubricMap[ev.rubric_id] ?? `#${ev.rubric_id}`}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClass(ev.status)}`}>
+                            {ev.status}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Rubric */}
-                      <td className="px-6 py-4 text-gray-500">
+                      <td className="px-6 py-4 text-gray-500 hidden md:table-cell">
                         {rubricMap[ev.rubric_id] ?? `#${ev.rubric_id}`}
                       </td>
 
                       {/* Score badge */}
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 hidden sm:table-cell">
                         <span
                           className={`inline-flex items-center justify-center w-10 h-7 rounded-full text-xs font-bold ${scoreBadgeClass(ev.total_score)}`}
                         >
@@ -353,12 +364,12 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Date */}
-                      <td className="px-6 py-4 text-gray-500">
+                      <td className="px-6 py-4 text-gray-500 hidden lg:table-cell">
                         {formatDate(ev.created_at)}
                       </td>
 
                       {/* Status pill */}
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 hidden sm:table-cell">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass(ev.status)}`}
                         >
