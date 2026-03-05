@@ -333,14 +333,14 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 group/card">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 sm:p-5 group/card">
       {/* Card header row */}
       <div className="flex items-start gap-2 mb-4">
         {/* Drag handle (visual only) */}
         <GripVertical className="w-5 h-5 text-gray-300 cursor-grab mt-1 shrink-0" />
 
-        {/* title + description */}
-        <div className="flex-1 space-y-2">
+        {/* title + description + mobile weight/menu stacked below */}
+        <div className="flex-1 min-w-0 space-y-2">
           <input
             type="text"
             value={criterion.title}
@@ -361,10 +361,72 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
               'text-sm text-gray-600 pb-1 bg-transparent placeholder:text-gray-300'
             )}
           />
+
+          {/* Weight + max pts + menu: visible only on mobile (< sm), stacked below inputs */}
+          <div className="flex items-center gap-3 pt-0.5 sm:hidden">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-xs text-gray-400">Weight</label>
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={criterion.weight}
+                onChange={(e) =>
+                  update({ weight: Math.max(0.1, parseFloat(e.target.value) || 1) })
+                }
+                className={cn(
+                  'w-16 border border-gray-300 rounded-md px-2 py-0.5 text-sm text-right',
+                  'focus:outline-none focus:ring-2 focus:ring-indigo-500'
+                )}
+              />
+            </div>
+            {useScores && (
+              <span className="text-sm text-gray-500 self-end pb-0.5">
+                /{maxPoints} pts
+              </span>
+            )}
+            <div className="ml-auto">
+              <DropdownMenu
+                align="right"
+                trigger={
+                  <button
+                    type="button"
+                    className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                }
+                groups={[
+                  {
+                    items: [
+                      {
+                        key: 'duplicate',
+                        label: 'Duplicate criterion',
+                        icon: <Copy className="w-4 h-4" />,
+                        onClick: onDuplicate,
+                      },
+                    ],
+                  },
+                  {
+                    items: [
+                      {
+                        key: 'delete',
+                        label: 'Delete criterion',
+                        icon: <Trash2 className="w-4 h-4" />,
+                        destructive: true,
+                        disabled: isOnly,
+                        onClick: onDelete,
+                      },
+                    ],
+                  },
+                ]}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* weight field */}
-        <div className="flex flex-col items-end gap-0.5 shrink-0">
+        {/* weight field — hidden on mobile, shown on sm+ */}
+        <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0">
           <label className="text-xs text-gray-400">Weight</label>
           <input
             type="number"
@@ -381,49 +443,51 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
           />
         </div>
 
-        {/* Max points badge */}
+        {/* Max points badge — hidden on mobile */}
         {useScores && (
-          <span className="text-sm text-gray-500 shrink-0 mt-5">
+          <span className="hidden sm:inline text-sm text-gray-500 shrink-0 mt-5">
             /{maxPoints} pts
           </span>
         )}
 
-        {/* Three-dot menu */}
-        <DropdownMenu
-          align="right"
-          trigger={
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors mt-4"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          }
-          groups={[
-            {
-              items: [
-                {
-                  key: 'duplicate',
-                  label: 'Duplicate criterion',
-                  icon: <Copy className="w-4 h-4" />,
-                  onClick: onDuplicate,
-                },
-              ],
-            },
-            {
-              items: [
-                {
-                  key: 'delete',
-                  label: 'Delete criterion',
-                  icon: <Trash2 className="w-4 h-4" />,
-                  destructive: true,
-                  disabled: isOnly,
-                  onClick: onDelete,
-                },
-              ],
-            },
-          ]}
-        />
+        {/* Three-dot menu — hidden on mobile */}
+        <div className="hidden sm:block shrink-0">
+          <DropdownMenu
+            align="right"
+            trigger={
+              <button
+                type="button"
+                className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors mt-4"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            }
+            groups={[
+              {
+                items: [
+                  {
+                    key: 'duplicate',
+                    label: 'Duplicate criterion',
+                    icon: <Copy className="w-4 h-4" />,
+                    onClick: onDuplicate,
+                  },
+                ],
+              },
+              {
+                items: [
+                  {
+                    key: 'delete',
+                    label: 'Delete criterion',
+                    icon: <Trash2 className="w-4 h-4" />,
+                    destructive: true,
+                    disabled: isOnly,
+                    onClick: onDelete,
+                  },
+                ],
+              },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Levels row */}
