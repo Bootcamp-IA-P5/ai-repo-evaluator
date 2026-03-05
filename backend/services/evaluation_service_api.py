@@ -14,6 +14,7 @@ from models import Evaluation, Rubric
 from schemas.response import APIResponse
 from schemas.evaluation import EvaluationResponse, EvaluationResponseWithFindings, FindingResponse
 from services.pdf_processor import BriefingProcessor
+from services.ai_evaluation_engine import AIEvaluationEngine, run_evaluation_task as ai_run_evaluation_task
 from core.logging_config import logger
 from core.messages import Messages
 from core.database import SessionLocal
@@ -245,33 +246,54 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
-        # 2. [HOOK] AI Integration Point
-        # This is where Developer B's RAG logic will be implemented.
-        # The briefing_snapshot is available as:
-        #   briefing_chunks = json.loads(evaluation.briefing_snapshot)
-        #
-        # Expected outputs:
-        #   - Create Finding records for each criterion
-        #   - Calculate total_score
-        #   - Generate ai_summary
-        #
-        # Example placeholder implementation:
-        #   findings = ai_engine.evaluate(
-        #       repo_url=evaluation.repo_url,
-        #       briefing=evaluation.briefing_snapshot,
-        #       rubric_id=evaluation.rubric_id
-        #   )
+        # 2. Initialize AI evaluation engine
+        ai_engine = AIEvaluationEngine()
 
-        # TODO: Implement AI evaluation logic here (Developer B's task)
-        # For now, we'll simulate a successful completion
+        # 3. Parse briefing chunks from snapshot
+        try:
+            briefing_chunks = json.loads(evaluation.briefing_snapshot)
+            logger.debug(f"Parsed {len(briefing_chunks)} briefing chunks")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse briefing snapshot for evaluation {evaluation_id}: {e}")
+            raise RuntimeError(f"Invalid briefing data: {str(e)}")
 
-        # 3. Update status to 'completed'
+        # 4. Run AI evaluation
+        try:
+            evaluation_result = ai_engine.evaluate_repository(
+                evaluation_id=evaluation_id,
+                repo_url=evaluation.repo_url,
+                rubric_id=evaluation.rubric_id,
+                briefing_chunks=briefing_chunks
+            )
+            
+            logger.info(f"AI evaluation completed for evaluation {evaluation_id}")
+            
+        except Exception as e:
+            logger.error(f"AI evaluation failed for evaluation {evaluation_id}: {e}")
+            # Re-raise to trigger error handling below
+            raise
+
+        # 5. Create finding records
+        from models import Finding
+        for finding_data in evaluation_result['findings']:
+            finding = Finding(
+                evaluation_id=evaluation_id,
+                criterion_id=finding_data['criterion_id'],
+                selected_level_id=finding_data['selected_level_id'],
+                file_path=finding_data.get('file_path'),
+                evidence_snippet=finding_data.get('evidence_snippet'),
+                improvement_suggestion=finding_data.get('improvement_suggestion')
+            )
+            db.add(finding)
+
+        # 6. Update evaluation with results
+        evaluation.total_score = evaluation_result['total_score']
+        evaluation.ai_summary = evaluation_result['ai_summary']
         evaluation.status = settings.EVALUATION_STATUS_COMPLETED
-        evaluation.total_score = 0.0  # Placeholder
-        evaluation.ai_summary = Messages.Evaluation.AI_SUMMARY_PENDING
+        
         db.commit()
 
-        logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_COMPLETED}'")
+        logger.info(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
 
     except Exception as e:
         # 4. On failure, update status to 'failed'
