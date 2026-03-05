@@ -164,23 +164,6 @@ export default function RubricsPage() {
     [apiUrl, criteriaCache]
   );
 
-  /**
-   * Force-refetches a rubric detail and replaces the cache entry.
-   * Used after inline level edits so the expanded card reflects the latest data.
-   */
-  const refreshRubricDetail = useCallback(
-    async (id: number) => {
-      try {
-        const res = await fetch(`${apiUrl}/api/v1/rubrics/${id}/`);
-        if (!res.ok) return;
-        const json: ApiResponse<RubricDetail> = await res.json();
-        if (!json.success) return;
-        setCriteriaCache((prev) => ({ ...prev, [id]: json.data }));
-      } catch { /* silently ignore refresh errors */ }
-    },
-    [apiUrl]
-  );
-
   // ---------------------------------------------------------------------------
   // Interactions
   // ---------------------------------------------------------------------------
@@ -336,7 +319,8 @@ export default function RubricsPage() {
   // ---------------------------------------------------------------------------
   // Inline level handlers (Option C — granular level management)
   // Each action calls the appropriate /criteria/{cid}/levels/* endpoint and
-  // then refreshes the cached rubric detail so the expanded view stays in sync.
+  // updates the local cache optimistically — avoids an extra GET and any race
+  // condition where the immediate re-fetch returns stale data.
   // ---------------------------------------------------------------------------
 
   /**
@@ -361,7 +345,28 @@ export default function RubricsPage() {
       const json: ApiResponse<RubricLevel> = await res.json();
       if (!json.success) throw new Error(json.message || 'Failed to update level');
       setEditingLevel(null);
-      await refreshRubricDetail(rubricId);
+      // Optimistically patch the level in cache using the server-returned data.
+      const updated = json.data;
+      setCriteriaCache((prev) => {
+        const rubric = prev[rubricId];
+        if (!rubric) return prev;
+        return {
+          ...prev,
+          [rubricId]: {
+            ...rubric,
+            criteria: rubric.criteria.map((c) =>
+              c.id === criterionId
+                ? {
+                    ...c,
+                    levels: c.levels.map((l) =>
+                      l.id === levelId ? { ...l, ...updated } : l
+                    ),
+                  }
+                : c
+            ),
+          },
+        };
+      });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to update level');
     } finally {
@@ -372,6 +377,9 @@ export default function RubricsPage() {
   /**
    * DELETE /rubrics/{rid}/criteria/{cid}/levels/{lid}/
    * Removes a single performance level from a criterion.
+   * Uses an optimistic local cache update instead of re-fetching so the UI
+   * reacts instantly and there is no race condition with the GET returning
+   * stale data right after the DELETE.
    */
   const handleDeleteLevel = async (rubricId: number, criterionId: number, levelId: number) => {
     setLevelLoading(true);
@@ -382,7 +390,22 @@ export default function RubricsPage() {
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error(`Failed to delete level (${res.status})`);
-      await refreshRubricDetail(rubricId);
+      // Optimistically remove the level from the local cache — no extra GET needed.
+      setCriteriaCache((prev) => {
+        const rubric = prev[rubricId];
+        if (!rubric) return prev;
+        return {
+          ...prev,
+          [rubricId]: {
+            ...rubric,
+            criteria: rubric.criteria.map((c) =>
+              c.id === criterionId
+                ? { ...c, levels: c.levels.filter((l) => l.id !== levelId) }
+                : c
+            ),
+          },
+        };
+      });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to delete level');
     } finally {
@@ -412,7 +435,23 @@ export default function RubricsPage() {
       const json: ApiResponse<RubricLevel> = await res.json();
       if (!json.success) throw new Error(json.message || 'Failed to add level');
       setAddingLevel(null);
-      await refreshRubricDetail(rubricId);
+      // Optimistically append the new level (with its server-assigned id) to the cache.
+      const newLevel = json.data;
+      setCriteriaCache((prev) => {
+        const rubric = prev[rubricId];
+        if (!rubric) return prev;
+        return {
+          ...prev,
+          [rubricId]: {
+            ...rubric,
+            criteria: rubric.criteria.map((c) =>
+              c.id === criterionId
+                ? { ...c, levels: [...c.levels, newLevel] }
+                : c
+            ),
+          },
+        };
+      });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to add level');
     } finally {
