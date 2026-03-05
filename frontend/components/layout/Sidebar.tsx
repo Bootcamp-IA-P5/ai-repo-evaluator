@@ -84,7 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {items.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            // Match exact path OR any sub-path (e.g. /past-evaluations/42 → /past-evaluations active).
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
 
             return (
               <Link
