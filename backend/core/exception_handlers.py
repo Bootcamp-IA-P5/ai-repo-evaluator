@@ -72,6 +72,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     errors = _format_validation_errors(exc.errors())
 
     logger.warning(f"Validation error on {request.method} {request.url.path}: {errors}")
+    logger.warning(f"Content-Type: {request.headers.get('content-type')}")
+    
 
     response = APIResponse(
         success=False,

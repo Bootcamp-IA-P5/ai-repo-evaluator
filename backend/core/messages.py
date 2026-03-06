@@ -121,3 +121,43 @@ class Messages:
         NOT_FOUND = "Resource not found"
         METHOD_NOT_ALLOWED = "Method not allowed"
         INTERNAL_SERVER_ERROR = "Internal server error"
+
+    class AIProvider:
+        """AI provider-related error messages."""
+
+        UNSUPPORTED = "Unsupported AI provider: {provider}"
+        INITIALIZATION_FAILED = "Failed to initialize {provider} client: {error}"
+        API_KEY_MISSING = "API key for {provider} is missing or invalid"
+        MODEL_NOT_FOUND = "Model '{model}' not found for provider {provider}"
+
+    class AIRepository:
+        """Repository-related error messages."""
+
+        CLONING_FAILED = "Failed to clone repository {repo_url}: {error}"
+        PROCESSING_FAILED = "Failed to process repository code: {error}"
+        INVALID_URL = "Invalid repository URL: {repo_url}"
+        ACCESS_DENIED = "Access denied to repository {repo_url}: {error}"
+
+    class AIRubric:
+        """Rubric-related error messages."""
+
+        NOT_FOUND = "Rubric {rubric_id} not found"
+        LOADING_FAILED = "Failed to load rubric {rubric_id}: {error}"
+        INVALID_STRUCTURE = "Invalid rubric structure for rubric {rubric_id}: {error}"
+        NO_CRITERIA = "Rubric {rubric_id} has no criteria defined"
+
+    class AIEvaluation:
+        """Evaluation-related error messages."""
+
+        EVALUATION_FAILED = "Evaluation failed: {error}"
+        CRITERION_EVALUATION_FAILED = "Failed to evaluate criterion '{criterion_title}': {error}"
+        AI_SUMMARY_GENERATION_FAILED = "Failed to generate AI summary: {error}"
+        INVALID_FINDING_DATA = "Invalid finding data for criterion {criterion_id}: {error}"
+        PARSING_RESPONSE_FAILED = "Failed to parse AI response: {error}"
+
+    class AIRAG:
+        """RAG (Retrieval-Augmented Generation) related error messages."""
+
+        CONTEXT_PREPARATION_FAILED = "Failed to prepare RAG context: {error}"
+        CHUNKING_FAILED = "Failed to chunk briefing document: {error}"
+        SIMILARITY_SEARCH_FAILED = "Failed to find relevant context chunks: {error}"

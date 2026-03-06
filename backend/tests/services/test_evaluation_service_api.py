@@ -248,7 +248,11 @@ class TestEvaluationServiceAPICreate:
 
         # Mock the BriefingProcessor
         mock_processor = MagicMock()
-        mock_processor.process.return_value = [{"content": "test chunk"}]
+        # Return a list with a mock Document-like object that has page_content
+        mock_doc = MagicMock()
+        mock_doc.page_content = "test chunk content"
+        mock_doc.metadata = {"source": "test.pdf"}
+        mock_processor.process.return_value = [mock_doc]
         mock_processor_class.return_value = mock_processor
 
         service = EvaluationServiceAPI()
@@ -282,8 +286,12 @@ class TestEvaluationServiceAPICreate:
         from schemas.evaluation import EvaluationRequest
         from services.evaluation_service_api import EvaluationServiceAPI
 
+        # Mock the BriefingProcessor to return proper Document-like objects
         mock_processor = MagicMock()
-        mock_processor.process.return_value = [{"content": "test"}]
+        mock_doc = MagicMock()
+        mock_doc.page_content = "test chunk content"
+        mock_doc.metadata = {"source": "test.pdf"}
+        mock_processor.process.return_value = [mock_doc]
         mock_processor_class.return_value = mock_processor
 
         service = EvaluationServiceAPI()

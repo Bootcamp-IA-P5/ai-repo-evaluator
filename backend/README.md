@@ -213,39 +213,53 @@ cp .env.template .env
 
 ### Prerequisites
 
-- Python 3.11+
-- PostgreSQL 15+
-- Virtual environment (recommended)
+- [Docker](https://docs.docker.com/get-docker/) (v20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+) or Docker Compose V1 (`docker-compose`)
 
-### Local Development
+### Development with Docker-in-Docker (Recommended)
 
-1. **Create and activate virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/macOS
-   # or
-   .\venv\Scripts\activate   # Windows
-   ```
+This project uses a Docker-in-Docker development environment with a devcontainer for seamless development:
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment:**
+1. **Configure environment:**
    ```bash
    cp .env.template .env
    # Edit .env with your settings
    ```
 
-4. **Run the server:**
+2. **Start the development environment:**
+   ```bash
+   # From project root
+   ./manage.sh backend   # Start database + backend
+   ./manage.sh all       # Start all services
+   ```
+
+3. **Access the backend:**
+   - API: http://localhost:8000
+   - Documentation: http://localhost:8000/docs
+
+### Local Development (Alternative)
+
+For local development without Docker:
+
+1. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment:**
+   ```bash
+   cp .env.template .env
+   # Edit .env with your settings
+   ```
+
+3. **Run the server:**
    ```bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 ### Docker Development
 
-Use the root-level management scripts:
+Use the root-level management script:
 
 ```bash
 # From project root

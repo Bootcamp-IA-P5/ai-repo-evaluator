@@ -1,0 +1,86 @@
+https://github.com/osrodgon/FactoriaF5_I_taximeter
+
+/evaluation
+
+{
+  "briefing_path": "/app/test_data/briefing.pdf",
+  "repo_url": "https://github.com/osrodgon/FactoriaF5_I_taximeter",
+  "rubric_id": 3
+}
+
+/rubric
+
+{
+  "title": "Rúbrica de evaluación de proyecto - Taxímetro",
+  "description": "Evaluación de competencias para el desarrollo de aplicaciones con Python V.1",
+  "criteria": [
+    {
+      "title": "Comunicar efectivamente el desarrollo de un proyecto de forma clara y estructurada",
+      "description": "Evaluación del uso de contenido visual/demo, estructura ordenada, estructura pragmática y storytelling.",
+      "weight": 10,
+      "levels": [
+        {
+          "level_title": "Completado",
+          "level_description": "Cumple con el uso de visuales, estructura y narración interactiva.",
+          "score_points": 10
+        },
+        {
+          "level_title": "No completado",
+          "level_description": "No cumple con los estándares de comunicación o interacción.",
+          "score_points": 0
+        }
+      ]
+    },
+    {
+      "title": "Gestionar equipos de forma eficiente",
+      "description": "Uso de Kanban/burndown charts, sprint backlog, herramientas de gestión (Trello, Jira) y estimación de tareas.",
+      "weight": 15,
+      "levels": [
+        {
+          "level_title": "Completado",
+          "level_description": "Demuestra uso eficiente de metodologías ágiles y herramientas de gestión.",
+          "score_points": 15
+        },
+        {
+          "level_title": "No completado",
+          "level_description": "Falta de seguimiento de tareas o uso de herramientas de gestión.",
+          "score_points": 0
+        }
+      ]
+    },
+    {
+      "title": "Gestionar eficientemente proyectos de desarrollo con herramientas de control de versiones",
+      "description": "Uso de README, conexión de repo local a remoto, commits descriptivos y nomenclatura de ramas.",
+      "weight": 25,
+      "levels": [
+        {
+          "level_title": "Completado",
+          "level_description": "Repositorio bien documentado con flujo de trabajo de Git correcto.",
+          "score_points": 25
+        },
+        {
+          "level_title": "No completado",
+          "level_description": "Uso deficiente de Git, falta de documentación o mensajes de commit poco claros.",
+          "score_points": 0
+        }
+      ]
+    },
+    {
+      "title": "Ser capaz de desarrollar un programa en Python",
+      "description": "Implementación técnica de bucles, condicionales, herramientas de logger y entornos virtuales (venv/conda).",
+      "weight": 50,
+      "levels": [
+        {
+          "level_title": "Completado",
+          "level_description": "Código funcional que utiliza correctamente lógica de programación y buenas prácticas de entorno.",
+          "score_points": 50
+        },
+        {
+          "level_title": "No completado",
+          "level_description": "El programa falla en lógica básica o no utiliza entornos virtuales/logging.",
+          "score_points": 0
+        }
+      ]
+    }
+  ]
+}
