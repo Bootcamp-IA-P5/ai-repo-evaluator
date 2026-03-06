@@ -1,46 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Github, Eye, EyeOff } from 'lucide-react';
+import { Github, FileText } from 'lucide-react';
 import {
   Button,
   Input,
   Select,
-  FileUpload,
   Card,
   CardContent,
   Alert,
 } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import type { SelectOption } from '@/components/ui';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const AI_PROVIDERS: SelectOption[] = [
-  { value: 'groq', label: 'Groq' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-];
-
-const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
-  groq: [
-    { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
-    { value: 'llama3-8b-8192', label: 'LLaMA 3 8B' },
-    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
-  ],
-  openai: [
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-  ],
-  anthropic: [
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-  ],
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,11 +24,8 @@ interface RubricOption {
 
 interface FormState {
   rubricId: string;
-  briefingFile: File | null;
+  briefingPath: string;
   repoUrl: string;
-  provider: string;
-  model: string;
-  apiKey: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -73,15 +41,11 @@ export default function NewEvaluationPage() {
   // Form
   const [form, setForm] = useState<FormState>({
     rubricId: '',
-    briefingFile: null,
+    briefingPath: '',
     repoUrl: '',
-    provider: '',
-    model: '',
-    apiKey: '',
   });
 
   // UI
-  const [showApiKey, setShowApiKey] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -108,16 +72,6 @@ export default function NewEvaluationPage() {
       });
   }, []);
 
-  // Model options depend on selected provider
-  const modelOptions: SelectOption[] = form.provider
-    ? (MODELS_BY_PROVIDER[form.provider] ?? [])
-    : [];
-
-  // Reset model when provider changes
-  const handleProviderChange = (value: string) => {
-    setForm((prev) => ({ ...prev, provider: value, model: '' }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -125,30 +79,27 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // Use relative URL so the Next.js proxy rewrite routes requests to the backend
-      const body = new FormData();
-      body.append('rubric_id', form.rubricId);
-      if (form.briefingFile) body.append('briefing', form.briefingFile);
-      body.append('repo_url', form.repoUrl);
-      body.append('provider', form.provider);
-      body.append('model', form.model);
-      if (form.apiKey) body.append('api_key', form.apiKey);
-
-      const res = await fetch(`/api/v1/evaluations`, {
+      const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
-        body,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rubric_id: parseInt(form.rubricId, 10),
+          repo_url: form.repoUrl,
+          briefing_path: form.briefingPath,
+        }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(
-          (err as { detail?: string })?.detail ?? 'Evaluation failed. Please try again.'
+          (err as { message?: string; detail?: string })?.message ??
+          (err as { detail?: string })?.detail ??
+          'Evaluation failed. Please try again.'
         );
       }
 
       setSubmitSuccess(true);
-      // Reset form on success
-      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: '', model: '', apiKey: '' });
+      setForm({ rubricId: '', briefingPath: '', repoUrl: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -163,10 +114,8 @@ export default function NewEvaluationPage() {
 
   const isFormValid =
     form.rubricId !== '' &&
-    form.briefingFile !== null &&
-    form.repoUrl.trim() !== '' &&
-    form.provider !== '' &&
-    form.model !== '';
+    form.briefingPath.trim() !== '' &&
+    form.repoUrl.trim() !== '';
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -212,14 +161,18 @@ export default function NewEvaluationPage() {
               fullWidth
             />
 
-            {/* Project Briefing (PDF) */}
-            <FileUpload
-              label="Project Briefing (PDF)"
-              accept=".pdf"
-              maxSize={10}
-              onFileSelect={(file) =>
-                setForm((prev) => ({ ...prev, briefingFile: file }))
+            {/* Project Briefing Path */}
+            <Input
+              label="Project Briefing Path (PDF)"
+              type="text"
+              placeholder="/data/briefings/project-briefing.pdf"
+              value={form.briefingPath}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, briefingPath: e.target.value }))
               }
+              helperText="Absolute path to the briefing PDF on the server."
+              leftIcon={<FileText className="w-4 h-4" />}
+              fullWidth
             />
 
             {/* GitHub Repository URL */}
@@ -232,56 +185,6 @@ export default function NewEvaluationPage() {
                 setForm((prev) => ({ ...prev, repoUrl: e.target.value }))
               }
               leftIcon={<Github className="w-4 h-4" />}
-              fullWidth
-            />
-
-            {/* AI Provider */}
-            <Select
-              label="AI Provider"
-              placeholder="Select a provider..."
-              options={AI_PROVIDERS}
-              value={form.provider}
-              onChange={handleProviderChange}
-              fullWidth
-            />
-
-            {/* Model */}
-            <Select
-              label="Model"
-              placeholder={
-                form.provider ? 'Select a model...' : 'Select a provider first'
-              }
-              options={modelOptions}
-              value={form.model}
-              onChange={(val) => setForm((prev) => ({ ...prev, model: val }))}
-              disabled={!form.provider}
-              fullWidth
-            />
-
-            {/* API Key — BYOK (optional) */}
-            <Input
-              label="API Key (Optional — BYOK)"
-              type={showApiKey ? 'text' : 'password'}
-              placeholder="sk-..."
-              value={form.apiKey}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, apiKey: e.target.value }))
-              }
-              helperText="Leave empty to use the default backend key."
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey((v) => !v)}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                >
-                  {showApiKey ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              }
               fullWidth
             />
 
