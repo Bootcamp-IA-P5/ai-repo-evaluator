@@ -42,6 +42,10 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
+// Server-side directory where briefing PDFs are stored.
+// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
+const BRIEFINGS_SERVER_DIR = '/data/briefings';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -125,29 +129,35 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // Use relative URL so the Next.js proxy rewrite routes requests to the backend
-      const body = new FormData();
-      body.append('rubric_id', form.rubricId);
-      if (form.briefingFile) body.append('briefing', form.briefingFile);
-      body.append('repo_url', form.repoUrl);
-      body.append('provider', form.provider);
-      body.append('model', form.model);
-      if (form.apiKey) body.append('api_key', form.apiKey);
+      // The backend expects JSON with { rubric_id, repo_url, briefing_path }.
+      // briefing_path must be a server-side absolute path; we derive it from
+      // the selected file's name using the configured server directory.
+      const briefingPath = `${BRIEFINGS_SERVER_DIR}/${form.briefingFile!.name}`;
 
-      const res = await fetch(`/api/v1/evaluations`, {
+      const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
-        body,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rubric_id: parseInt(form.rubricId, 10),
+          repo_url: form.repoUrl,
+          briefing_path: briefingPath,
+        }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({})) as {
+        success?: boolean;
+        message?: string;
+        errors?: string[];
+        detail?: string;
+      };
+
+      if (!res.ok || data.success === false) {
         throw new Error(
-          (err as { detail?: string })?.detail ?? 'Evaluation failed. Please try again.'
+          data.message ?? data.errors?.[0] ?? data.detail ?? 'Evaluation failed. Please try again.'
         );
       }
 
       setSubmitSuccess(true);
-      // Reset form on success
       setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: '', model: '', apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');

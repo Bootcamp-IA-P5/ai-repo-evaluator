@@ -57,8 +57,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div className={cn('mb-8', className)}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
           {description && (
             <p className="mt-2 text-sm md:text-base text-gray-600">{description}</p>

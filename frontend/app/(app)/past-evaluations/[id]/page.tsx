@@ -502,7 +502,7 @@ export default function EvaluationDetailPage() {
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                             Evidence
                           </p>
-                          <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-words leading-relaxed">
+                          <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word leading-relaxed">
                             {finding.evidence_snippet}
                           </pre>
                         </div>

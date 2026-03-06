@@ -733,7 +733,7 @@ export default function RubricsPage() {
                                       })
                                     }
                                     title="Edit level"
-                                    className="p-0.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 opacity-0 group-hover/lvlrow:opacity-100 transition-opacity shrink-0"
+                                    className="p-0.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 opacity-100 sm:opacity-0 sm:group-hover/lvlrow:opacity-100 transition-opacity shrink-0"
                                   >
                                     <Pencil className="w-3 h-3" />
                                   </button>
@@ -748,7 +748,7 @@ export default function RubricsPage() {
                                         ? 'Cannot delete the only level'
                                         : 'Delete level'
                                     }
-                                    className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover/lvlrow:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                    className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-100 sm:opacity-0 sm:group-hover/lvlrow:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </button>
