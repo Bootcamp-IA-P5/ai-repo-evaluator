@@ -43,8 +43,8 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
 };
 
 // Server-side directory where briefing PDFs are stored.
-// The backend reads files from this path; it must match the backend configuration.
-const BRIEFINGS_SERVER_DIR = '/data/briefings';
+// Maps to ./backend/briefings/ on the host (volume mount ./backend:/app).
+const BRIEFINGS_SERVER_DIR = '/app/briefings';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,12 +144,16 @@ export default function NewEvaluationPage() {
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({})) as {
+        success?: boolean;
+        message?: string;
+        errors?: string[];
+        detail?: string;
+      };
+
+      if (!res.ok || data.success === false) {
         throw new Error(
-          (err as { message?: string; detail?: string })?.message ??
-            (err as { detail?: string })?.detail ??
-            'Evaluation failed. Please try again.'
+          data.message ?? data.errors?.[0] ?? data.detail ?? 'Evaluation failed. Please try again.'
         );
       }
 
@@ -309,5 +313,3 @@ export default function NewEvaluationPage() {
     </div>
   );
 }
-
-
