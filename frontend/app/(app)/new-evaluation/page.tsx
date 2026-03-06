@@ -43,8 +43,8 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
 };
 
 // Server-side directory where briefing PDFs are stored.
-// Maps to ./backend/briefings/ on the host (volume mount ./backend:/app).
-const BRIEFINGS_SERVER_DIR = '/app/briefings';
+// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
+const BRIEFINGS_SERVER_DIR = '/data/briefings';
 
 // ---------------------------------------------------------------------------
 // Types
