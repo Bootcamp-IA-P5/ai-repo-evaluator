@@ -5,11 +5,8 @@ This module defines the FastAPI router for evaluation-related endpoints,
 using dependency injection for both database sessions and service instances.
 """
 
-import os
-import shutil
-import tempfile
 from typing import List
-from fastapi import APIRouter, Depends, status, BackgroundTasks, File, Form, UploadFile
+from fastapi import APIRouter, Depends, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from core.database import get_db, SQLALCHEMY_DATABASE_URL
@@ -161,10 +158,8 @@ def get_evaluation(
     },
 )
 def create_evaluation(
+    evaluation_request: EvaluationRequest,
     background_tasks: BackgroundTasks,
-    rubric_id: int = Form(...),
-    repo_url: str = Form(...),
-    briefing: UploadFile = File(...),
     db: Session = Depends(get_db),
     evaluation_service: EvaluationServiceAPI = Depends(get_evaluation_service_api),
 ):
@@ -184,27 +179,9 @@ def create_evaluation(
     - 'completed': Evaluation finished successfully
     - 'failed': Evaluation encountered an error
     """
-    # Save uploaded PDF to a temporary file so BriefingProcessor can read it
-    suffix = os.path.splitext(briefing.filename or "")[1] or ".pdf"
-    tmp_path: str | None = None
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            shutil.copyfileobj(briefing.file, tmp)
-            tmp_path = tmp.name
-
-        evaluation_request = EvaluationRequest(
-            rubric_id=rubric_id,
-            repo_url=repo_url,
-            briefing_path=tmp_path,
-        )
-        return evaluation_service.create(
-            db=db,
-            evaluation_request=evaluation_request,
-            background_tasks=background_tasks,
-            db_url=SQLALCHEMY_DATABASE_URL,
-        )
-    finally:
-        # The PDF is processed synchronously inside create(), so it is safe to
-        # delete the temp file once create() returns.
-        if tmp_path and os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+    return evaluation_service.create(
+        db=db,
+        evaluation_request=evaluation_request,
+        background_tasks=background_tasks,
+        db_url=SQLALCHEMY_DATABASE_URL,
+    )
