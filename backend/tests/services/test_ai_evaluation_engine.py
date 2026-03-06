@@ -13,8 +13,10 @@ from unittest.mock import Mock, patch, MagicMock
 from sqlalchemy.orm import Session
 
 from services.ai_evaluation_engine import AIEvaluationEngine, run_evaluation_task
+from services.ai_client import AIProvider
 from models import Evaluation, Rubric, Criterion, Level, Finding
 from core.settings import settings
+from unittest.mock import patch
 
 
 class TestAIEvaluationEngine:
@@ -22,11 +24,11 @@ class TestAIEvaluationEngine:
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
-        # Create the engine without initializing OpenAI client
-        self.ai_engine = AIEvaluationEngine.__new__(AIEvaluationEngine)
-        self.ai_engine.git_loader = Mock()
-        self.ai_engine.openai_client = Mock()
-        self.ai_engine.model = "gpt-4"
+        # Patch the AIClient to prevent it from being initialized
+        with patch('services.ai_evaluation_engine.AIClient') as mock_ai_client:
+            self.ai_engine = AIEvaluationEngine(provider=AIProvider.OPENAI)
+            self.ai_engine.git_loader = Mock()
+            self.ai_engine.ai_client = mock_ai_client.return_value
 
     def test_evaluate_repository_success(self):
         """Test successful evaluation of a repository."""
@@ -63,10 +65,8 @@ class TestAIEvaluationEngine:
             ]
         }
         
-        # Mock OpenAI response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '''
+        # Mock AIClient response
+        self.ai_engine.ai_client.chat.return_value = '''
         {
             "level_id": 1,
             "file_path": "test.py",
@@ -74,7 +74,6 @@ class TestAIEvaluationEngine:
             "improvement": "Add docstring"
         }
         '''
-        self.ai_engine.openai_client.chat.completions.create.return_value = mock_response
         
         # Mock _load_rubric_data
         with patch.object(self.ai_engine, '_load_rubric_data', return_value=mock_rubric_data):
@@ -120,8 +119,8 @@ class TestAIEvaluationEngine:
                     briefing_chunks=[]
                 )
 
-    def test_evaluate_repository_openai_failure(self):
-        """Test evaluation continues when OpenAI API fails for a criterion."""
+    def test_evaluate_repository_ai_client_failure(self):
+        """Test evaluation continues when AI Client fails for a criterion."""
         # Mock data
         mock_code_chunks = [Mock(page_content="test", metadata={"file_path": "test.py"})]
         self.ai_engine.git_loader.fetch_and_process.return_value = mock_code_chunks
@@ -141,8 +140,8 @@ class TestAIEvaluationEngine:
             ]
         }
         
-        # Mock OpenAI failure
-        self.ai_engine.openai_client.chat.completions.create.side_effect = Exception("API Error")
+        # Mock AIClient failure
+        self.ai_engine.ai_client.chat.side_effect = Exception("API Error")
         
         with patch.object(self.ai_engine, '_load_rubric_data', return_value=mock_rubric_data):
             result = self.ai_engine.evaluate_repository(
@@ -158,7 +157,7 @@ class TestAIEvaluationEngine:
             assert "Evaluation failed" in result['findings'][0]['improvement_suggestion']
 
     def test_parse_evaluation_response_valid_json(self):
-        """Test parsing of valid JSON response from OpenAI."""
+        """Test parsing of valid JSON response from AI."""
         response_text = '''
         {
             "level_id": 2,
@@ -220,6 +219,10 @@ class TestRunEvaluationTask:
         mock_evaluation.repo_url = "https://github.com/test/repo"
         mock_evaluation.rubric_id = 1
         mock_evaluation.briefing_snapshot = '[{"page_content": "Test requirement"}]'
+        mock_evaluation.ai_provider = "openai"
+        mock_evaluation.ai_model = "gpt-4"
+        mock_evaluation.ai_api_key = "test_key"
+
         
         mock_db.query.return_value.filter.return_value.first.return_value = mock_evaluation
         
@@ -287,6 +290,9 @@ class TestRunEvaluationTask:
         mock_evaluation = Mock(spec=Evaluation)
         mock_evaluation.id = 1
         mock_evaluation.briefing_snapshot = 'invalid json'
+        mock_evaluation.ai_provider = "openai"
+        mock_evaluation.ai_model = "gpt-4"
+        mock_evaluation.ai_api_key = "test_key"
         
         mock_db.query.return_value.filter.return_value.first.return_value = mock_evaluation
         
@@ -295,7 +301,14 @@ class TestRunEvaluationTask:
         
         # Should update status to failed
         assert mock_evaluation.status == settings.EVALUATION_STATUS_FAILED
-        assert "Invalid briefing data" in mock_evaluation.ai_summary or "OPENAI_API_KEY" in mock_evaluation.ai_summary
+        assert "Invalid briefing data" in mock_evaluation.ai_summary
+
+    @pytest.mark.parametrize("provider", [AIProvider.OPENAI, AIProvider.GEMINI, AIProvider.GROK])
+    @patch('services.ai_evaluation_engine.AIClient')
+    def test_ai_engine_initialization_with_providers(self, mock_ai_client, provider):
+        """Test that AIEvaluationEngine initializes the correct AIClient."""
+        AIEvaluationEngine(provider=provider)
+        mock_ai_client.assert_called_with(provider=provider, model=None, api_key=None)
 
     @patch('services.ai_evaluation_engine.SessionLocal')
     @patch('services.ai_evaluation_engine.AIEvaluationEngine')
@@ -307,7 +320,10 @@ class TestRunEvaluationTask:
         mock_evaluation = Mock(spec=Evaluation)
         mock_evaluation.id = 1
         mock_evaluation.briefing_snapshot = '[{"page_content": "Test"}]'
-        
+        mock_evaluation.ai_provider = "openai"
+        mock_evaluation.ai_model = "gpt-4"
+        mock_evaluation.ai_api_key = "test_key"
+
         mock_db.query.return_value.filter.return_value.first.return_value = mock_evaluation
         
         mock_ai_engine = Mock()
@@ -320,3 +336,56 @@ class TestRunEvaluationTask:
         # Should update status to failed
         assert mock_evaluation.status == settings.EVALUATION_STATUS_FAILED
         assert "AI evaluation failed" in mock_evaluation.ai_summary
+
+
+class TestSettingsIntegration:
+    """Test cases for settings integration with AI providers."""
+
+    @patch('core.settings.get_api_key')
+    def test_ai_client_uses_settings_api_key(self, mock_get_api_key):
+        """Test that AIClient uses settings for API key when none provided."""
+        mock_get_api_key.return_value = "settings_key"
+        
+        # Import here to avoid circular import issues in tests
+        from services.ai_client import AIClient, AIProvider
+        
+        # Create AIClient without explicit API key
+        client = AIClient(provider=AIProvider.OPENAI)
+        
+        # Verify that get_api_key was called
+        mock_get_api_key.assert_called_once_with(AIProvider.OPENAI)
+
+    @patch('core.settings.get_api_key')
+    def test_ai_client_uses_explicit_api_key_over_settings(self, mock_get_api_key):
+        """Test that AIClient uses explicit API key when provided, ignoring settings."""
+        mock_get_api_key.return_value = "settings_key"
+        
+        from services.ai_client import AIClient, AIProvider
+        
+        # Create AIClient with explicit API key
+        client = AIClient(provider=AIProvider.OPENAI, api_key="explicit_key")
+        
+        # Verify that get_api_key was not called
+        mock_get_api_key.assert_not_called()
+
+    @patch('core.settings.get_api_key')
+    def test_ai_evaluation_engine_uses_settings_when_no_api_key(self, mock_get_api_key):
+        """Test that AIEvaluationEngine uses settings for API key when none provided."""
+        mock_get_api_key.return_value = "settings_key"
+        
+        # Create AIEvaluationEngine without explicit API key
+        engine = AIEvaluationEngine(provider=AIProvider.OPENAI)
+        
+        # Verify that get_api_key was called
+        mock_get_api_key.assert_called_once_with(AIProvider.OPENAI)
+
+    @patch('core.settings.get_api_key')
+    def test_ai_evaluation_engine_uses_explicit_api_key_over_settings(self, mock_get_api_key):
+        """Test that AIEvaluationEngine uses explicit API key when provided, ignoring settings."""
+        mock_get_api_key.return_value = "settings_key"
+        
+        # Create AIEvaluationEngine with explicit API key
+        engine = AIEvaluationEngine(provider=AIProvider.OPENAI, api_key="explicit_key")
+        
+        # Verify that get_api_key was not called
+        mock_get_api_key.assert_not_called()

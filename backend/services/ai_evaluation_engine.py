@@ -10,17 +10,17 @@ This module orchestrates the complete AI evaluation workflow:
 """
 
 import json
-import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from core.logging_config import logger
-from core.settings import settings
+from core.settings import settings, get_api_key, get_model
 from core.database import SessionLocal
+from core.messages import Messages
 from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
-from openai import OpenAI
+from services.ai_client import AIClient, AIProvider
 import os
 
 
@@ -30,17 +30,21 @@ class AIEvaluationEngine:
     
     This service handles:
     - Repository cloning and code analysis
-    - RAG-augmented criterion evaluation using OpenAI
+    - RAG-augmented criterion evaluation using different AI providers
     - Finding creation with WHIS data (Where, How, Improvement, Score)
     - Weighted score calculation
     - AI summary generation
     """
 
-    def __init__(self):
+    def __init__(self, provider: AIProvider = AIProvider.GEMINI, model: Optional[str] = None, api_key: Optional[str] = None):
         """Initialize the AI evaluation engine with required services."""
         self.git_loader = GitLoaderService()
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4")
+        # If no API key provided, use settings
+        if api_key is None:
+            api_key = get_api_key(provider)
+            model = get_model(provider)
+        logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5]}")
+        self.ai_client = AIClient(provider=provider, model=model, api_key=api_key)
 
     def evaluate_repository(
         self, 
@@ -70,7 +74,10 @@ class AIEvaluationEngine:
             logger.info(f"Repository cloned successfully: {len(code_chunks)} code chunks generated")
         except Exception as e:
             logger.error(f"Failed to clone repository {repo_url}: {e}")
-            raise RuntimeError(f"Repository cloning failed: {str(e)}")
+            raise RuntimeError(Messages.AIRepository.CLONING_FAILED.format(
+                repo_url=repo_url, 
+                error=str(e)
+            ))
 
         # 2. Load rubric criteria and levels
         try:
@@ -78,7 +85,10 @@ class AIEvaluationEngine:
             logger.info(f"Loaded rubric {rubric_id} with {len(rubric_data['criteria'])} criteria")
         except Exception as e:
             logger.error(f"Failed to load rubric {rubric_id}: {e}")
-            raise RuntimeError(f"Rubric loading failed: {str(e)}")
+            raise RuntimeError(Messages.AIRubric.LOADING_FAILED.format(
+                rubric_id=rubric_id, 
+                error=str(e)
+            ))
 
         # 3. Evaluate each criterion
         findings = []
@@ -120,7 +130,10 @@ class AIEvaluationEngine:
                     'selected_level_id': None,
                     'file_path': None,
                     'evidence_snippet': None,
-                    'improvement_suggestion': f"Evaluation failed: {str(e)}",
+                    'improvement_suggestion': Messages.AIEvaluation.CRITERION_EVALUATION_FAILED.format(
+                        criterion_title=criterion['title'], 
+                        error=str(e)
+                    ),
                     'score_points': 0.0
                 })
 
@@ -143,7 +156,7 @@ class AIEvaluationEngine:
             logger.info("AI summary generated successfully")
         except Exception as e:
             logger.error(f"Failed to generate AI summary: {e}")
-            ai_summary = f"AI summary generation failed: {str(e)}"
+            ai_summary = Messages.AIEvaluation.AI_SUMMARY_GENERATION_FAILED.format(error=str(e))
 
         return {
             'findings': findings,
@@ -166,7 +179,7 @@ class AIEvaluationEngine:
             # Load rubric
             rubric = db.query(Rubric).filter(Rubric.id == rubric_id).first()
             if not rubric:
-                raise ValueError(f"Rubric {rubric_id} not found")
+                raise ValueError(Messages.AIRubric.NOT_FOUND.format(rubric_id=rubric_id))
 
             # Load criteria with levels
             criteria = db.query(Criterion).filter(Criterion.rubric_id == rubric_id).all()
@@ -221,31 +234,23 @@ class AIEvaluationEngine:
         # Prepare RAG context
         context = self._prepare_rag_context(criterion, code_chunks, briefing_chunks)
         
-        # Prepare prompt for OpenAI
+        # Prepare prompt for AI
         prompt = self._build_evaluation_prompt(criterion, context)
         
         try:
-            # Call OpenAI API
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert code reviewer evaluating student projects against specific rubric criteria."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1,  # Low temperature for consistent, deterministic results
-                max_tokens=1000
-            )
+            # Call AI provider API
+            response_text = self.ai_client.chat(prompt)
             
             # Parse response
             evaluation_result = self._parse_evaluation_response(
-                response.choices[0].message.content,
+                response_text,
                 criterion
             )
             
             return evaluation_result
             
         except Exception as e:
-            logger.error(f"OpenAI API call failed for criterion '{criterion['title']}': {e}")
+            logger.error(f"AI API call failed for criterion '{criterion['title']}': {e}")
             return None
 
     def _prepare_rag_context(
@@ -301,7 +306,7 @@ class AIEvaluationEngine:
 
     def _build_evaluation_prompt(self, criterion: Dict[str, Any], context: str) -> str:
         """
-        Build the evaluation prompt for OpenAI API.
+        Build the evaluation prompt for AI API.
         
         Args:
             criterion: The criterion being evaluated
@@ -347,10 +352,10 @@ class AIEvaluationEngine:
 
     def _parse_evaluation_response(self, response_text: str, criterion: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Parse the OpenAI response and extract evaluation data.
+        Parse the AI response and extract evaluation data.
         
         Args:
-            response_text: Raw response from OpenAI API
+            response_text: Raw response from AI API
             criterion: The criterion being evaluated
             
         Returns:
@@ -450,17 +455,8 @@ class AIEvaluationEngine:
         """
 
         try:
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an experienced instructor providing constructive feedback to students."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=1500
-            )
-            
-            return response.choices[0].message.content
+            response_text = self.ai_client.chat(prompt)
+            return response_text
             
         except Exception as e:
             logger.error(f"Failed to generate AI summary: {e}")
@@ -496,7 +492,11 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
         # 2. Initialize AI evaluation engine
-        ai_engine = AIEvaluationEngine()
+        ai_engine = AIEvaluationEngine(
+            provider=AIProvider(evaluation.ai_provider),
+            model=evaluation.ai_model,
+            api_key=evaluation.ai_api_key
+        )
 
         # 3. Parse briefing chunks from snapshot
         try:
@@ -504,7 +504,9 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
             logger.debug(f"Parsed {len(briefing_chunks)} briefing chunks")
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse briefing snapshot for evaluation {evaluation_id}: {e}")
-            raise RuntimeError(f"Invalid briefing data: {str(e)}")
+            raise RuntimeError(Messages.AIEvaluation.PARSING_RESPONSE_FAILED.format(
+                error=str(e)
+            ))
 
         # 4. Run AI evaluation
         try:

@@ -8,6 +8,15 @@ This module provides centralized configuration management with:
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from enum import Enum
+
+
+class AIProvider(str, Enum):
+    """Supported AI providers."""
+    OPENAI = "openai"
+    GEMINI = "gemini"
+    GROK = "grok"
 
 
 class Settings(BaseSettings):
@@ -42,8 +51,13 @@ class Settings(BaseSettings):
     EVALUATION_STATUS_COMPLETED: str = "completed"
     EVALUATION_STATUS_FAILED: str = "failed"
 
-    # RAG / Vector Store Configuration
+    # RAG / Vector Store Configuration. To be obtained from environment
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = ""
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = ""
+    GROK_API_KEY: str = ""
+    GROK_MODEL: str = ""
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     FAISS_STORAGE_PATH: str = "/app/storage/faiss"
 
@@ -58,9 +72,52 @@ class Settings(BaseSettings):
                          "Pipfile.lock", "composer.lock", "pnpm-lock.yaml", ".DS_Store"}
     MAX_FILE_SIZE: int = 50_000  # ~50KB
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"  # Ignore extra environment variables
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"  # Ignore extra environment variables
+    )
+
+    @field_validator('OPENAI_API_KEY', 'GEMINI_API_KEY', 'GROK_API_KEY', mode='before')
+    @classmethod
+    def validate_api_keys(cls, v: str, info) -> str:
+        """Validate that API keys are provided."""
+        if not v:
+            raise ValueError(f"{info.field_name} must be provided in .env file")
+        return v
+    
+    @field_validator('OPENAI_MODEL', 'GEMINI_MODEL', 'GROK_MODEL', mode='before')
+    @classmethod
+    def validate_models(cls, v: str, info) -> str:
+        """Validate that models are provided."""
+        if not v:
+            raise ValueError(f"{info.field_name} must be provided in .env file")
+        return v
+    
 
 # Global settings instance
 settings = Settings()
+
+
+def get_api_key(provider: AIProvider) -> str:
+    """Get API key for the specified provider."""
+    if provider == AIProvider.OPENAI:
+        return settings.OPENAI_API_KEY
+    elif provider == AIProvider.GEMINI:
+        return settings.GEMINI_API_KEY
+    elif provider == AIProvider.GROK:
+        return settings.GROK_API_KEY
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+    
+    
+def get_model(provider: AIProvider) -> str:
+    """Get model for the specified provider."""
+    if provider == AIProvider.OPENAI:
+        return settings.OPENAI_MODEL
+    elif provider == AIProvider.GEMINI:
+        return settings.GEMINI_MODEL
+    elif provider == AIProvider.GROK:
+        return settings.GROK_MODEL
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+    

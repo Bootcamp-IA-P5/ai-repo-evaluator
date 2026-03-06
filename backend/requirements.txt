@@ -19,6 +19,8 @@ faiss-cpu==1.7.4
 pypdf==4.0.1
 tiktoken==0.12.0
 openai==2.24.0
+google-genai==1.66.0
+groq==1.0.0
 
 # Environment & Utils
 colorlog==6.8.2

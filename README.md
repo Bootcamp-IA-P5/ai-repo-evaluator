@@ -62,8 +62,6 @@ A full-stack application for evaluating repositories using AI-powered analysis. 
 | Platform | Script | Description |
 |----------|--------|-------------|
 | Linux/macOS | `manage.sh` | Bash script |
-| Windows (PowerShell) | `manage.ps1` | PowerShell script (recommended) |
-| Windows (CMD) | `manage.bat` | Batch file for older systems |
 
 ## 🚀 Quick Start
 
@@ -93,16 +91,6 @@ cp frontend/.env.template frontend/.env
 ./manage.sh all
 ```
 
-**Windows (PowerShell):**
-```powershell
-.\manage.ps1 all
-```
-
-**Windows (Command Prompt):**
-```cmd
-manage.bat all
-```
-
 ### 4. Access the Application
 
 | Service | URL |
@@ -128,8 +116,6 @@ ai-repo-evaluator/
 ├── backups/                  # Database backup storage
 ├── docker-compose.dev.yml    # Docker Compose configuration
 ├── manage.sh                 # Development management script (Linux/macOS)
-├── manage.ps1                # Development management script (Windows PowerShell)
-├── manage.bat                # Development management script (Windows CMD)
 ├── requirements.txt          # Root requirements (references backend)
 └── README.md                 # This file
 ```

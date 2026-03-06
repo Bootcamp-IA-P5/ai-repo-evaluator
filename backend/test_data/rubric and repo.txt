@@ -3,7 +3,7 @@ https://github.com/osrodgon/FactoriaF5_I_taximeter
 /evaluation
 
 {
-  "briefing_path": "/home/oscarro/FactoriaF5/Final/ai-repo-evaluator/test_data/briefing.pdf",
+  "briefing_path": "/app/test_data/briefing.pdf",
   "repo_url": "https://github.com/osrodgon/FactoriaF5_I_taximeter",
   "rubric_id": 3
 }
