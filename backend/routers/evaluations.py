@@ -171,6 +171,58 @@ def get_evaluation(
         },
         422: RESPONSE_422,
     },
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "basic_evaluation": {
+                            "summary": "Basic evaluation (no AI configuration)",
+                            "description": "Create an evaluation using default AI settings",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "/data/briefings/project-briefing.pdf"
+                            }
+                        },
+                        "openai_evaluation": {
+                            "summary": "Evaluation with OpenAI configuration",
+                            "description": "Create an evaluation using OpenAI GPT-4 (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "ai_provider": "openai",
+                                "ai_model": "gpt-4"
+                            }
+                        },
+                        "gemini_evaluation": {
+                            "summary": "Evaluation with Gemini configuration",
+                            "description": "Create an evaluation using Google Gemini (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "ai_provider": "gemini",
+                                "ai_model": "gemini-1.5-pro"
+                            }
+                        },
+                        "grok_evaluation": {
+                            "summary": "Evaluation with Grok configuration",
+                            "description": "Create an evaluation using Grok (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "ai_provider": "grok",
+                                "ai_model": "grok-beta"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def create_evaluation(
     evaluation_request: EvaluationRequest,
