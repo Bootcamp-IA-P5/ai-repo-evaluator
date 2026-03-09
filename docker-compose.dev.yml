@@ -16,6 +16,7 @@ services:
     container_name: evaluator_backend
     volumes:
       - ${PROJECT_ROOT:-.}/backend:/app
+      - shared_data:/data
     env_file:
       - ./backend/.env
     depends_on:
@@ -29,10 +30,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: evaluator_frontend
+    container_name: evaluator_frontend  
     volumes:
       - ${PROJECT_ROOT:-.}/frontend:/app
       - /app/node_modules
+      - shared_data:/data
     env_file:
       - ./frontend/.env
     ports:
@@ -46,3 +48,4 @@ networks:
 
 volumes:
   postgres_data:
+  shared_data:
