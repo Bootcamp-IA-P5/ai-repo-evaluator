@@ -124,6 +124,20 @@ class RubricServiceAPI:
             or error information on failure.
         """
         try:
+            # Check for existing rubric with the same title (case-insensitive)
+            existing_rubric = db.query(Rubric).filter(
+                Rubric.title.ilike(rubric_request.title)
+            ).first()
+            
+            if existing_rubric:
+                logger.warning(f"Rubric with title '{rubric_request.title}' already exists")
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Rubric.DUPLICATE_TITLE],
+                    message=Messages.Rubric.DUPLICATE_TITLE,
+                )
+
             # Create the rubric
             rubric = Rubric(
                 title=rubric_request.title,

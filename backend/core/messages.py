@@ -28,6 +28,7 @@ class Messages:
         # Future: POST/PUT/DELETE messages
         CREATED = "Rubric created successfully"
         CREATE_FAILED = "Failed to create rubric"
+        DUPLICATE_TITLE = "A rubric with this title already exists"
         UPDATED = "Rubric updated successfully"
         UPDATE_FAILED = "Failed to update rubric"
         DELETED = "Rubric deleted successfully"

@@ -25,7 +25,7 @@ Database: PostgreSQL or SQLite (via SQLAlchemy)
 """
 
 import datetime
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
@@ -45,7 +45,7 @@ class Rubric(Base):
     
     Attributes:
         id: Unique identifier, auto-incremented primary key with index
-        title: Human-readable name of the rubric (required, max 255 chars)
+        title: Human-readable name of the rubric (required, max 255 chars, unique)
         description: Detailed explanation of the rubric's purpose
         created_at: Timestamp of rubric creation (auto-set to UTC now)
     
@@ -65,7 +65,8 @@ class Rubric(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     # Required: Human-readable name for the rubric (e.g., "Final Project Rubric")
-    title = Column(String(255), nullable=False)
+    # Unique constraint prevents duplicate rubric titles
+    title = Column(String(255), nullable=False, unique=True)
     
     # Optional: Detailed description of what this rubric evaluates
     description = Column(Text)
