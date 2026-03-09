@@ -10,7 +10,7 @@ for each rubric criterion evaluation.
 """
 
 from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 
 from core.logging_config import logger
@@ -25,19 +25,17 @@ class ContextEngine:
     evaluation criterion.
 
     Attributes:
-        embeddings: OpenAIEmbeddings instance for vectorization.
+        embeddings: GoogleGenerativeAIEmbeddings instance for vectorization.
         vector_store: FAISS index built from the provided documents.
     """
 
-    def __init__(self, documents: list[dict], openai_api_key: str = None):
+    def __init__(self, documents: list[dict]):
         """
         Initialize the context engine with documents and build the FAISS index.
 
         Args:
             documents: List of document dicts with 'page_content' and 'metadata'
-                       keys, or langchain Document objects.
-            openai_api_key: OpenAI API key for embeddings. If None, reads from
-                            settings.OPENAI_API_KEY (BYOK pattern).
+                    keys, or langchain Document objects.
 
         Raises:
             ValueError: If documents list is empty.
@@ -48,11 +46,10 @@ class ContextEngine:
         # Lazy import to avoid triggering pydantic validation at module level
         from core.settings import settings
 
-        # BYOK: use provided key or fall back to environment config
-        api_key = openai_api_key or settings.OPENAI_API_KEY
-        self.embeddings = OpenAIEmbeddings(
+        # Always use API key from .env via settings
+        self.embeddings = GoogleGenerativeAIEmbeddings(
             model=settings.EMBEDDING_MODEL,
-            openai_api_key=api_key,
+            google_api_key=settings.GEMINI_API_KEY,
         )
 
         # Extract texts and metadatas from documents (support both dict and Document)
@@ -99,7 +96,7 @@ class ContextEngine:
 
         Args:
             documents: List of document dicts with 'page_content' and 'metadata'
-                       keys, or langchain Document objects.
+                    keys, or langchain Document objects.
 
         Raises:
             ValueError: If documents list is empty.
