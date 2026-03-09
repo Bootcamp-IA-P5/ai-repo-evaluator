@@ -21,6 +21,7 @@ from core.messages import Messages
 from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
+from services.context_engine import ContextEngine
 import os
 
 
@@ -90,7 +91,16 @@ class AIEvaluationEngine:
                 error=str(e)
             ))
 
-        # 3. Evaluate each criterion
+        # 3. Build ContextEngine ONCE for all criteria (avoids re-vectorizing per criterion)
+        try:
+            all_documents = list(briefing_chunks) + list(code_chunks)
+            context_engine = ContextEngine(all_documents)
+            logger.info(f"ContextEngine built with {len(all_documents)} documents")
+        except Exception as e:
+            logger.error(f"Failed to build ContextEngine: {e}")
+            raise RuntimeError(f"Failed to build vector index: {str(e)}")
+
+        # 4. Evaluate each criterion
         findings = []
         total_weighted_score = 0.0
         total_weight = 0.0
@@ -102,8 +112,7 @@ class AIEvaluationEngine:
                 # Evaluate this criterion
                 finding_result = self._evaluate_criterion(
                     criterion=criterion,
-                    code_chunks=code_chunks,
-                    briefing_chunks=briefing_chunks
+                    context_engine=context_engine,
                 )
                 
                 if finding_result:
@@ -137,7 +146,7 @@ class AIEvaluationEngine:
                     'score_points': 0.0
                 })
 
-        # 4. Calculate total score
+        # 5. Calculate total score
         if total_weight > 0:
             total_score = total_weighted_score / total_weight
         else:
@@ -145,7 +154,7 @@ class AIEvaluationEngine:
             
         logger.info(f"Evaluation completed. Total score: {total_score:.2f}")
 
-        # 5. Generate AI summary
+        # 6. Generate AI summary
         try:
             ai_summary = self._generate_ai_summary(
                 repo_url=repo_url,
@@ -216,23 +225,21 @@ class AIEvaluationEngine:
 
     def _evaluate_criterion(
         self, 
-        criterion: Dict[str, Any], 
-        code_chunks: List[Any], 
-        briefing_chunks: List[Dict[str, Any]]
+        criterion: Dict[str, Any],
+        context_engine: ContextEngine,
     ) -> Optional[Dict[str, Any]]:
         """
         Evaluate a single criterion using RAG-augmented AI analysis.
         
         Args:
             criterion: Dictionary containing criterion data and levels
-            code_chunks: List of code documents from repository
-            briefing_chunks: List of briefing document chunks
+            context_engine: Pre-built ContextEngine with all documents indexed
             
         Returns:
             Dictionary containing finding data or None if evaluation failed
         """
         # Prepare RAG context
-        context = self._prepare_rag_context(criterion, code_chunks, briefing_chunks)
+        context = self._prepare_rag_context(criterion, context_engine)
         
         # Prepare prompt for AI
         prompt = self._build_evaluation_prompt(criterion, context)
@@ -255,44 +262,40 @@ class AIEvaluationEngine:
 
     def _prepare_rag_context(
         self, 
-        criterion: Dict[str, Any], 
-        code_chunks: List[Any], 
-        briefing_chunks: List[Dict[str, Any]]
+        criterion: Dict[str, Any],
+        context_engine: ContextEngine,
     ) -> str:
         """
-        Prepare RAG context by finding relevant code and briefing chunks.
-        
+        Prepare RAG context using ContextEngine semantic search.
+
+        Uses the pre-built FAISS index to retrieve the most relevant
+        chunks for the given criterion via semantic similarity search.
+
         Args:
             criterion: The criterion being evaluated
-            code_chunks: All code chunks from repository
-            briefing_chunks: All briefing chunks (can be dicts or Document objects)
+            context_engine: Pre-built ContextEngine with all documents indexed
             
         Returns:
             String containing relevant context for the evaluation
         """
-        # For now, we'll use a simple approach - in a full implementation,
-        # this would use vector similarity search to find the most relevant chunks
-        
-        # Get relevant briefing context (all chunks for now)
-        # Handle both dict format (from JSON) and Document format
-        briefing_context_parts = []
-        for i, chunk in enumerate(briefing_chunks):
-            if isinstance(chunk, dict):
-                # Handle dict format (from JSON deserialization)
-                content = chunk.get('page_content', '')
-            else:
-                # Handle Document object format
-                content = getattr(chunk, 'page_content', '')
-            briefing_context_parts.append(f"Requirement {i+1}: {content}")
-        
-        briefing_context = "\n\n".join(briefing_context_parts)
-        
-        # Get relevant code context (sample of code chunks)
+        # Search semantically using the pre-built index
+        query = f"{criterion['title']}: {criterion['description']}"
+        relevant_chunks = context_engine.get_relevant_context(query, k=8)
+
+        # Separate briefing and code results for structured context
+        briefing_results = [c for c in relevant_chunks if c['metadata'].get('type') in ('requirement', 'documentation')]
+        code_results = [c for c in relevant_chunks if c['metadata'].get('type') not in ('requirement', 'documentation')]
+
+        briefing_context = "\n\n".join([
+            f"Requirement {i+1}: {c['page_content']}"
+            for i, c in enumerate(briefing_results)
+        ]) or "No relevant requirements found."
+
         code_context = "\n\n".join([
-            f"Code file {i+1} ({chunk.metadata.get('file_path', 'unknown')}): {chunk.page_content[:500]}..."
-            for i, chunk in enumerate(code_chunks[:5])  # Limit to first 5 chunks
-        ])
-        
+            f"File {i+1} ({c['metadata'].get('file_path', 'unknown')}): {c['page_content']}"
+            for i, c in enumerate(code_results)
+        ]) or "No relevant code found."
+
         return f"""
         CRITERION: {criterion['title']}
         DESCRIPTION: {criterion['description']}
