@@ -139,7 +139,7 @@ class AIEvaluationEngine:
 
         # 4. Calculate total score
         if total_weight > 0:
-            total_score = total_weighted_score / total_weight
+            total_score = total_weighted_score
         else:
             total_score = 0.0
             
