@@ -245,30 +245,83 @@ export default function RubricsPage() {
 
       // 2b. Update existing criteria / create new ones
       for (const criterion of data.criteria) {
-        const payload = {
-          title: criterion.title,
-          description: criterion.description,
-          weight: criterion.weight,
-          levels: criterion.levels,
-        };
-
         if (criterion.id && existingIds.has(criterion.id)) {
-          // Update existing criterion (PUT accepts title, description, weight, levels)
+          // Update criterion metadata ONLY — do NOT send levels here.
+          // The backend's PUT resets levels via criterion.levels.clear(), which
+          // throws a FK violation if any level is referenced by a finding.
+          // Levels are diffed and managed individually via their own endpoints below.
           const putRes = await fetch(
             `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
+              body: JSON.stringify({
+                title: criterion.title,
+                description: criterion.description,
+                weight: criterion.weight,
+              }),
             }
           );
           if (!putRes.ok) throw new Error(`Failed to update criterion (${putRes.status})`);
+
+          // Diff levels against the original criterion snapshot.
+          const origCriterion = editRubric.criteria.find((c) => c.id === criterion.id);
+          const incomingLevelIds = new Set(criterion.levels.map((l) => l.id).filter(Boolean));
+
+          for (const level of criterion.levels) {
+            if (level.id) {
+              // Update existing level (partial update — non-critical, ignore errors).
+              await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${level.id}/`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    level_title:       level.level_title,
+                    level_description: level.level_description,
+                    score_points:      level.score_points,
+                  }),
+                }
+              ).catch(() => { /* non-critical */ });
+            } else {
+              // Create new level.
+              const createRes = await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    level_title:       level.level_title,
+                    level_description: level.level_description,
+                    score_points:      level.score_points,
+                  }),
+                }
+              );
+              if (!createRes.ok) throw new Error(`Failed to create level (${createRes.status})`);
+            }
+          }
+
+          // Delete levels removed in the editor.
+          // Best-effort: skip any level still referenced by a finding (FK constraint).
+          for (const origLevel of (origCriterion?.levels ?? [])) {
+            if (origLevel.id && !incomingLevelIds.has(origLevel.id)) {
+              await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${origLevel.id}/`,
+                { method: 'DELETE' }
+              ).catch(() => { /* level may be referenced by a finding — skip */ });
+            }
+          }
         } else {
-          // Create new criterion
+          // Create new criterion with its levels.
           const postRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              title:       criterion.title,
+              description: criterion.description,
+              weight:      criterion.weight,
+              levels:      criterion.levels,
+            }),
           });
           if (!postRes.ok) throw new Error(`Failed to create criterion (${postRes.status})`);
         }
