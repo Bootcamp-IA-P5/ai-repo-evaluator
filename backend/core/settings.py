@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = ""
     GROK_API_KEY: str = ""
     GROK_MODEL: str = ""
-    EMBEDDING_MODEL: str = "models/text-embedding-004"
+    EMBEDDING_MODEL: str = "models/text-embedding-001"
     FAISS_STORAGE_PATH: str = "/app/storage/faiss"
 
     # GitLoader Configuration
