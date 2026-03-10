@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft,
   FileText,
@@ -400,7 +402,9 @@ export default function EvaluationDetailPage() {
           <div>
             <p className="text-sm font-semibold text-red-800">Evaluation failed</p>
             {evaluation.ai_summary && (
-              <p className="text-sm text-red-700 mt-0.5">{evaluation.ai_summary}</p>
+              <div className="text-sm text-red-700 mt-0.5 prose prose-sm prose-red max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation.ai_summary}</ReactMarkdown>
+              </div>
             )}
           </div>
         </div>
@@ -413,9 +417,9 @@ export default function EvaluationDetailPage() {
             <Lightbulb className="w-4 h-4 text-yellow-500" />
             AI Summary
           </h2>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {evaluation.ai_summary}
-          </p>
+          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm prose-gray max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation.ai_summary}</ReactMarkdown>
+          </div>
         </div>
       )}
 
@@ -516,9 +520,9 @@ export default function EvaluationDetailPage() {
                             <p className="text-xs font-medium text-amber-800 mb-0.5">
                               Improvement suggestion
                             </p>
-                            <p className="text-sm text-amber-700 leading-relaxed">
-                              {finding.improvement_suggestion}
-                            </p>
+                            <div className="text-sm text-amber-700 leading-relaxed prose prose-sm max-w-none [&_a]:text-amber-800 [&_code]:bg-amber-100 [&_code]:text-amber-900">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{finding.improvement_suggestion}</ReactMarkdown>
+                            </div>
                           </div>
                         </div>
                       )}
