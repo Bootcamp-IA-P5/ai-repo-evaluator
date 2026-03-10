@@ -58,8 +58,8 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = ""
     GROK_API_KEY: str = ""
     GROK_MODEL: str = ""
-    EMBEDDING_MODEL: str = "text-embedding-3-small"
-    FAISS_STORAGE_PATH: str = "/app/storage/faiss"
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001"
+    
 
     # GitLoader Configuration
     CODE_SUFFIXES: list = [".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".rb", ".go", ".php", ".mjs"]
@@ -68,9 +68,13 @@ class Settings(BaseSettings):
     SPECIAL_FILES: set = {"Dockerfile", "Makefile", "Procfile", "Gemfile", ".gitignore", ".dockerignore"}
     IGNORE_DIRS: set = {".git", "node_modules", "__pycache__", ".venv", "venv",
                         ".tox", ".mypy_cache", ".pytest_cache", "dist", "build"}
-    IGNORE_FILES: set = {"package-lock.json", "yarn.lock", "poetry.lock",
+    IGNORE_FILES: set = {"package-lock.json", "yarn.lock", "poetry.lock", 
                          "Pipfile.lock", "composer.lock", "pnpm-lock.yaml", ".DS_Store"}
     MAX_FILE_SIZE: int = 50_000  # ~50KB
+
+    # RAG Context Limits
+    RAG_MAX_CHUNKS: int = 8
+    RAG_MAX_CHUNK_CHARS: int = 1200
 
     model_config = SettingsConfigDict(
         env_file=".env",
