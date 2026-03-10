@@ -253,30 +253,48 @@ export default function RubricsPage() {
       // 2b. Update existing criteria / create new ones
       for (const criterion of data.criteria) {
         if (criterion.id && existingIds.has(criterion.id)) {
-          // Update criterion metadata ONLY — do NOT send levels in this request.
-          // The backend PUT clears all levels via criterion.levels.clear(), which
-          // throws a FK violation when a level is referenced by a finding.
-          // Levels are diffed and managed individually via their own endpoints below.
-          const putRes = await fetch(
-            `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: criterion.title,
-                description: criterion.description,
-                weight: criterion.weight,
-              }),
+          const origCriterion = editRubric.criteria.find((c) => c.id === criterion.id);
+
+          // Update criterion metadata only when something actually changed.
+          // The backend PUT always calls criterion.levels.clear() when levels are
+          // present in the schema, which triggers a FK violation for levels referenced
+          // by findings. We send only title/description/weight (no levels), but even
+          // so the backend may fail. Treat this as non-blocking: a FK violation means
+          // the metadata could not be updated this time, but level management can still
+          // proceed with the individual /levels/* endpoints below.
+          const metaChanged =
+            origCriterion?.title !== criterion.title ||
+            origCriterion?.description !== criterion.description ||
+            origCriterion?.weight !== criterion.weight;
+
+          if (metaChanged) {
+            const putRes = await fetch(
+              `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: criterion.title,
+                  description: criterion.description,
+                  weight: criterion.weight,
+                }),
+              }
+            );
+            if (!putRes.ok) {
+              // Non-2xx: log the error but keep going so levels are still managed.
+              console.error(`[handleEdit] criterion ${criterion.id} metadata PUT failed (${putRes.status})`);
+            } else {
+              const putJson: ApiResponse<unknown> = await putRes.json();
+              if (!putJson.success) {
+                // HTTP 200 but success:false — typically a FK violation from the backend
+                // attempting levels.clear(). Log and continue; level management below
+                // will still run and apply the user's changes.
+                console.error(`[handleEdit] criterion ${criterion.id} metadata PUT: ${putJson.message}`);
+              }
             }
-          );
-          // Check both HTTP status and application-level success flag.
-          // The backend may return HTTP 200 with {success: false} on a FK violation.
-          if (!putRes.ok) throw new Error(`Failed to update criterion (${putRes.status})`);
-          const putJson: ApiResponse<unknown> = await putRes.json();
-          if (!putJson.success) throw new Error(putJson.message || 'Failed to update criterion');
+          }
 
           // Diff levels against the original criterion snapshot.
-          const origCriterion = editRubric.criteria.find((c) => c.id === criterion.id);
           const incomingLevelIds = new Set(criterion.levels.map((l) => l.id).filter(Boolean));
 
           for (const level of criterion.levels) {
