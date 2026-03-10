@@ -22,7 +22,6 @@ from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
 from services.context_engine import ContextEngine
-from services.prompts import build_grading_prompt, build_summary_prompt
 import os
 
 
@@ -242,13 +241,9 @@ class AIEvaluationEngine:
         # Prepare RAG context
         rag_context = self._prepare_rag_context(criterion, context_engine)
         
-        # Build prompt using centralized prompt templates
-        prompt = build_grading_prompt(
-            criterion=criterion,
-            levels=criterion['levels'],
-            briefing_context=rag_context['briefing'],
-            code_evidence=rag_context['code'],
-        )
+        # Build prompt using inline method
+        context = f"BRIEFING REQUIREMENTS:\n{rag_context['briefing']}\n\nCODE EVIDENCE:\n{rag_context['code']}"
+        prompt = self._build_evaluation_prompt(criterion, context)
         
         try:
             # Call AI provider API
@@ -428,22 +423,24 @@ class AIEvaluationEngine:
         Returns:
             String containing the AI-generated summary
         """
-        # Prepare findings for summary prompt
-        findings_for_summary = []
-        for finding in findings:
-            findings_for_summary.append({
-                'criterion_title': finding.get('criterion_id', 'Unknown'),
-                'score_points': finding.get('score_points', 0),
-                'evidence': finding.get('evidence_snippet', 'No evidence provided'),
-                'improvement': finding.get('improvement_suggestion', 'No improvement suggested'),
-            })
+        # Build summary from findings
+        findings_text = "\n".join([
+            f"- Criterion {f.get('criterion_id', 'Unknown')}: "
+            f"{f.get('score_points', 0)} points - {f.get('evidence_snippet', 'No evidence')}"
+            for f in findings
+        ])
         
-        prompt = build_summary_prompt(
-            repo_url=repo_url,
-            rubric_title=rubric_title,
-            findings_summary=findings_for_summary,
-            total_score=total_score,
-        )
+        prompt = f"""
+        Generate a comprehensive evaluation summary for:
+        Repository: {repo_url}
+        Rubric: {rubric_title}
+        Total Score: {total_score:.2f}
+
+        Findings:
+        {findings_text}
+
+        Provide a professional summary highlighting strengths, weaknesses, and key recommendations.
+        """
 
         try:
             response_text = self.ai_client.chat(prompt)
