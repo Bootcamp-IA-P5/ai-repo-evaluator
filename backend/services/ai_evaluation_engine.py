@@ -21,6 +21,7 @@ from core.messages import Messages
 from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
+from services.context_engine import ContextEngine
 import os
 
 
@@ -77,7 +78,7 @@ class AIEvaluationEngine:
             raise RuntimeError(Messages.AIRepository.CLONING_FAILED.format(
                 repo_url=repo_url, 
                 error=str(e)
-            ))
+            )) from e
 
         # 2. Load rubric criteria and levels
         try:
@@ -88,9 +89,18 @@ class AIEvaluationEngine:
             raise RuntimeError(Messages.AIRubric.LOADING_FAILED.format(
                 rubric_id=rubric_id, 
                 error=str(e)
-            ))
+            )) from e
 
-        # 3. Evaluate each criterion
+        # 3. Build ContextEngine ONCE for all criteria (avoids re-vectorizing per criterion)
+        try:
+            all_documents = list(briefing_chunks) + list(code_chunks)
+            context_engine = ContextEngine(all_documents)
+            logger.info(f"ContextEngine built with {len(all_documents)} documents")
+        except Exception as e:
+            logger.error(f"Failed to build ContextEngine: {e}")
+            raise RuntimeError(f"Failed to build vector index: {str(e)}") from e
+
+        # 4. Evaluate each criterion
         findings = []
         total_weighted_score = 0.0
         total_weight = 0.0
@@ -102,8 +112,7 @@ class AIEvaluationEngine:
                 # Evaluate this criterion
                 finding_result = self._evaluate_criterion(
                     criterion=criterion,
-                    code_chunks=code_chunks,
-                    briefing_chunks=briefing_chunks
+                    context_engine=context_engine,
                 )
                 
                 if finding_result:
@@ -137,15 +146,15 @@ class AIEvaluationEngine:
                     'score_points': 0.0
                 })
 
-        # 4. Calculate total score
+        # 5. Calculate total score
         if total_weight > 0:
-            total_score = total_weighted_score / total_weight
+            total_score = total_weighted_score
         else:
             total_score = 0.0
             
         logger.info(f"Evaluation completed. Total score: {total_score:.2f}")
 
-        # 5. Generate AI summary
+        # 6. Generate AI summary
         try:
             ai_summary = self._generate_ai_summary(
                 repo_url=repo_url,
@@ -216,25 +225,24 @@ class AIEvaluationEngine:
 
     def _evaluate_criterion(
         self, 
-        criterion: Dict[str, Any], 
-        code_chunks: List[Any], 
-        briefing_chunks: List[Dict[str, Any]]
+        criterion: Dict[str, Any],
+        context_engine: ContextEngine,
     ) -> Optional[Dict[str, Any]]:
         """
         Evaluate a single criterion using RAG-augmented AI analysis.
         
         Args:
             criterion: Dictionary containing criterion data and levels
-            code_chunks: List of code documents from repository
-            briefing_chunks: List of briefing document chunks
+            context_engine: Pre-built ContextEngine with all documents indexed
             
         Returns:
             Dictionary containing finding data or None if evaluation failed
         """
         # Prepare RAG context
-        context = self._prepare_rag_context(criterion, code_chunks, briefing_chunks)
+        rag_context = self._prepare_rag_context(criterion, context_engine)
         
-        # Prepare prompt for AI
+        # Build prompt using inline method
+        context = f"BRIEFING REQUIREMENTS:\n{rag_context['briefing']}\n\nCODE EVIDENCE:\n{rag_context['code']}"
         prompt = self._build_evaluation_prompt(criterion, context)
         
         try:
@@ -255,54 +263,48 @@ class AIEvaluationEngine:
 
     def _prepare_rag_context(
         self, 
-        criterion: Dict[str, Any], 
-        code_chunks: List[Any], 
-        briefing_chunks: List[Dict[str, Any]]
-    ) -> str:
+        criterion: Dict[str, Any],
+        context_engine: ContextEngine,
+    ) -> Dict[str, str]:
         """
-        Prepare RAG context by finding relevant code and briefing chunks.
-        
+        Prepare RAG context using ContextEngine semantic search.
+
+        Uses the pre-built FAISS index to retrieve the most relevant
+        chunks for the given criterion via semantic similarity search.
+
         Args:
             criterion: The criterion being evaluated
-            code_chunks: All code chunks from repository
-            briefing_chunks: All briefing chunks (can be dicts or Document objects)
+            context_engine: Pre-built ContextEngine with all documents indexed
             
         Returns:
-            String containing relevant context for the evaluation
+            Dictionary with 'briefing' and 'code' context strings
         """
-        # For now, we'll use a simple approach - in a full implementation,
-        # this would use vector similarity search to find the most relevant chunks
-        
-        # Get relevant briefing context (all chunks for now)
-        # Handle both dict format (from JSON) and Document format
-        briefing_context_parts = []
-        for i, chunk in enumerate(briefing_chunks):
-            if isinstance(chunk, dict):
-                # Handle dict format (from JSON deserialization)
-                content = chunk.get('page_content', '')
-            else:
-                # Handle Document object format
-                content = getattr(chunk, 'page_content', '')
-            briefing_context_parts.append(f"Requirement {i+1}: {content}")
-        
-        briefing_context = "\n\n".join(briefing_context_parts)
-        
-        # Get relevant code context (sample of code chunks)
+        # Search semantically using the pre-built index
+        query = f"{criterion['title']}: {criterion['description']}"
+        relevant_chunks = context_engine.get_relevant_context(query, k=8)
+
+        # Separate briefing and code results for structured context
+        briefing_results = [c for c in relevant_chunks if c['metadata'].get('type') in ('requirement', 'documentation')]
+        code_results = [c for c in relevant_chunks if c['metadata'].get('type') not in ('requirement', 'documentation')]
+
+        # Limit context size to avoid exceeding model token limits
+        max_chunks = settings.RAG_MAX_CHUNKS
+        max_chars = settings.RAG_MAX_CHUNK_CHARS
+
+        briefing_context = "\n\n".join([
+            f"Requirement {i+1}: {c['page_content'][:max_chars]}"
+            for i, c in enumerate(briefing_results[:max_chunks])
+        ]) or "No relevant requirements found."
+
         code_context = "\n\n".join([
-            f"Code file {i+1} ({chunk.metadata.get('file_path', 'unknown')}): {chunk.page_content[:500]}..."
-            for i, chunk in enumerate(code_chunks[:5])  # Limit to first 5 chunks
-        ])
-        
-        return f"""
-        CRITERION: {criterion['title']}
-        DESCRIPTION: {criterion['description']}
-        
-        RELEVANT REQUIREMENTS:
-        {briefing_context}
-        
-        RELEVANT CODE SAMPLES:
-        {code_context}
-        """
+            f"File {i+1} ({c['metadata'].get('file_path', 'unknown')}): {c['page_content'][:max_chars]}"
+            for i, c in enumerate(code_results[:max_chunks])
+        ]) or "No relevant code found."
+
+        return {
+            'briefing': briefing_context,
+            'code': code_context,
+        }
 
     def _build_evaluation_prompt(self, criterion: Dict[str, Any], context: str) -> str:
         """
@@ -421,37 +423,23 @@ class AIEvaluationEngine:
         Returns:
             String containing the AI-generated summary
         """
-        # Prepare findings summary
-        findings_summary = []
-        for finding in findings:
-            level_info = f"Score: {finding.get('score_points', 0)} points"
-            evidence = finding.get('evidence_snippet', 'No evidence provided')
-            improvement = finding.get('improvement_suggestion', 'No improvement suggested')
-            
-            findings_summary.append(f"""
-            - {finding.get('criterion_id', 'Unknown criterion')}: {level_info}
-              Evidence: {evidence[:200]}...
-              Improvement: {improvement[:200]}...
-            """)
+        # Build summary from findings
+        findings_text = "\n".join([
+            f"- Criterion {f.get('criterion_id', 'Unknown')}: "
+            f"{f.get('score_points', 0)} points - {f.get('evidence_snippet', 'No evidence')}"
+            for f in findings
+        ])
         
         prompt = f"""
-        Generate a comprehensive evaluation summary for a student project.
+        Generate a comprehensive evaluation summary for:
+        Repository: {repo_url}
+        Rubric: {rubric_title}
+        Total Score: {total_score:.2f}
 
-        REPOSITORY: {repo_url}
-        RUBRIC: {rubric_title}
-        OVERALL SCORE: {total_score:.2f}/10
+        Findings:
+        {findings_text}
 
-        DETAILED FINDINGS:
-        {chr(10).join(findings_summary)}
-
-        INSTRUCTIONS:
-        1. Provide an overall assessment of the project quality
-        2. Highlight the strongest aspects of the implementation
-        3. Identify the most critical areas for improvement
-        4. Provide actionable recommendations for the student
-        5. Keep the tone constructive and educational
-
-        FORMAT: Write a 3-4 paragraph summary suitable for student feedback.
+        Provide a professional summary highlighting strengths, weaknesses, and key recommendations.
         """
 
         try:
@@ -463,7 +451,13 @@ class AIEvaluationEngine:
             return f"Summary generation failed: {str(e)}"
 
 
-def run_evaluation_task(evaluation_id: int, db_url: str):
+def run_evaluation_task(
+    evaluation_id: int, 
+    db_url: str,
+    ai_provider: str = None,
+    ai_model: str = None,
+    ai_api_key: str = None
+):
     """
     Background task for running the AI evaluation process.
 
@@ -474,6 +468,9 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
     Args:
         evaluation_id: The ID of the evaluation to process
         db_url: Database URL for creating a new session
+        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_model: Specific model for the provider - optional
+        ai_api_key: API key for the provider - optional
     """
     # Create a new database session for the background task
     db = SessionLocal()
@@ -492,11 +489,16 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
         # 2. Initialize AI evaluation engine
-        ai_engine = AIEvaluationEngine(
-            provider=AIProvider(evaluation.ai_provider),
-            model=evaluation.ai_model,
-            api_key=evaluation.ai_api_key
-        )
+        # Use provided AI configuration or default to settings
+        if ai_provider and ai_model and ai_api_key:
+            ai_engine = AIEvaluationEngine(
+                provider=AIProvider(ai_provider),
+                model=ai_model,
+                api_key=ai_api_key
+            )
+        else:
+            # Use default configuration from settings
+            ai_engine = AIEvaluationEngine()
 
         # 3. Parse briefing chunks from snapshot
         try:
@@ -506,7 +508,7 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
             logger.error(f"Failed to parse briefing snapshot for evaluation {evaluation_id}: {e}")
             raise RuntimeError(Messages.AIEvaluation.PARSING_RESPONSE_FAILED.format(
                 error=str(e)
-            ))
+            )) from e
 
         # 4. Run AI evaluation
         try:
