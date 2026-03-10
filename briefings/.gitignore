@@ -1,0 +1,6 @@
+# Ignore all uploaded PDF briefing files — they live on the host and are
+# shared with the backend container via a bind mount (./briefings:/data/briefings).
+# The folder itself IS tracked so docker-compose can create the bind mount
+# without errors on a fresh clone.
+*
+!.gitignore

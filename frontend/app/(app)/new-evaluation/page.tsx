@@ -52,10 +52,6 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
 const DEFAULT_PROVIDER = 'gemini';
 const DEFAULT_MODEL    = 'gemini-2.5-flash';
 
-// Server-side directory where briefing PDFs are stored.
-// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
-const BRIEFINGS_SERVER_DIR = '/data/briefings';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -140,11 +136,30 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // The backend expects JSON with { rubric_id, repo_url, briefing_path }.
-      // briefing_path must be a server-side absolute path; we derive it from
-      // the selected file's name using the configured server directory.
-      const briefingPath = `${BRIEFINGS_SERVER_DIR}/${form.briefingFile!.name}`;
+      // Step 1 — Upload the PDF to the shared briefings volume via the Next.js
+      // route handler. The handler saves the file to /data/briefings (mounted
+      // in both containers) and returns the server-side absolute path.
+      const uploadForm = new FormData();
+      uploadForm.append('file', form.briefingFile!);
 
+      const uploadRes = await fetch('/api/upload-briefing', {
+        method: 'POST',
+        body: uploadForm,
+      });
+
+      const uploadData = await uploadRes.json().catch(() => ({})) as {
+        success?: boolean;
+        message?: string;
+        data?: { path: string; name: string };
+      };
+
+      if (!uploadRes.ok || uploadData.success === false) {
+        throw new Error(uploadData.message ?? 'Failed to upload briefing PDF');
+      }
+
+      const briefingPath = uploadData.data!.path;
+
+      // Step 2 — Create the evaluation with the confirmed server-side path.
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
