@@ -19,28 +19,38 @@ import type { SelectOption } from '@/components/ui';
 // ---------------------------------------------------------------------------
 
 const AI_PROVIDERS: SelectOption[] = [
-  { value: 'groq', label: 'Groq' },
-  { value: 'openai', label: 'OpenAI' },
+  { value: 'gemini',    label: 'Gemini (Google)' },
+  { value: 'groq',      label: 'Groq' },
+  { value: 'openai',    label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
 ];
 
 const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
+  gemini: [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
+  ],
   groq: [
     { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
-    { value: 'llama3-8b-8192', label: 'LLaMA 3 8B' },
-    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+    { value: 'llama3-8b-8192',          label: 'LLaMA 3 8B' },
+    { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
   ],
   openai: [
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-4o',       label: 'GPT-4o' },
+    { value: 'gpt-4o-mini',  label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo',  label: 'GPT-4 Turbo' },
   ],
   anthropic: [
     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+    { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku' },
+    { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus' },
   ],
 };
+
+// Default provider and model used when the user does not change the selection.
+const DEFAULT_PROVIDER = 'gemini';
+const DEFAULT_MODEL    = 'gemini-2.5-flash';
 
 // Server-side directory where briefing PDFs are stored.
 // Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
@@ -74,13 +84,13 @@ export default function NewEvaluationPage() {
   const [rubricsLoading, setRubricsLoading] = useState(true);
   const [rubricsError, setRubricsError] = useState(false);
 
-  // Form
+  // Form — Gemini is pre-selected so the user can submit without touching the AI fields.
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
     repoUrl: '',
-    provider: '',
-    model: '',
+    provider: DEFAULT_PROVIDER,
+    model: DEFAULT_MODEL,
     apiKey: '',
   });
 
@@ -117,9 +127,10 @@ export default function NewEvaluationPage() {
     ? (MODELS_BY_PROVIDER[form.provider] ?? [])
     : [];
 
-  // Reset model when provider changes
+  // When provider changes, auto-select the first model of that provider.
   const handleProviderChange = (value: string) => {
-    setForm((prev) => ({ ...prev, provider: value, model: '' }));
+    const firstModel = MODELS_BY_PROVIDER[value]?.[0]?.value ?? '';
+    setForm((prev) => ({ ...prev, provider: value, model: firstModel }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,7 +169,8 @@ export default function NewEvaluationPage() {
       }
 
       setSubmitSuccess(true);
-      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: '', model: '', apiKey: '' });
+      // Reset to Gemini defaults so the button stays enabled after a submission.
+      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: DEFAULT_PROVIDER, model: DEFAULT_MODEL, apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -171,12 +183,11 @@ export default function NewEvaluationPage() {
     label: r.title,
   }));
 
+  // Provider and model are optional — the backend uses Gemini by default when omitted.
   const isFormValid =
     form.rubricId !== '' &&
     form.briefingFile !== null &&
-    form.repoUrl.trim() !== '' &&
-    form.provider !== '' &&
-    form.model !== '';
+    form.repoUrl.trim() !== '';
 
   return (
     <div className="max-w-3xl mx-auto">
