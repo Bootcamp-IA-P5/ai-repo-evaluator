@@ -183,7 +183,14 @@ export default function RubricsPage() {
 
   const handleEditClick = async (rubric: RubricSummary) => {
     setActionError(null);
+    setIsSaving(false);
     setEditFetching(true);
+    // Always fetch fresh data — bypass the cache so the modal never shows stale levels
+    setCriteriaCache((prev) => {
+      const next = { ...prev };
+      delete next[rubric.id];
+      return next;
+    });
     const detail = await fetchRubricDetail(rubric.id);
     setEditFetching(false);
     if (!detail) {
@@ -219,7 +226,7 @@ export default function RubricsPage() {
     setIsSaving(true);
     setActionError(null);
     try {
-      // Step 1: Update rubric metadata only (PUT only accepts title + description)
+      // Step 1: Update rubric metadata only (PUT /rubrics/{id}/ accepts title + description)
       const metaRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -246,9 +253,9 @@ export default function RubricsPage() {
       // 2b. Update existing criteria / create new ones
       for (const criterion of data.criteria) {
         if (criterion.id && existingIds.has(criterion.id)) {
-          // Update criterion metadata ONLY — do NOT send levels here.
-          // The backend's PUT resets levels via criterion.levels.clear(), which
-          // throws a FK violation if any level is referenced by a finding.
+          // Update criterion metadata ONLY — do NOT send levels in this request.
+          // The backend PUT clears all levels via criterion.levels.clear(), which
+          // throws a FK violation when a level is referenced by a finding.
           // Levels are diffed and managed individually via their own endpoints below.
           const putRes = await fetch(
             `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
@@ -262,7 +269,11 @@ export default function RubricsPage() {
               }),
             }
           );
+          // Check both HTTP status and application-level success flag.
+          // The backend may return HTTP 200 with {success: false} on a FK violation.
           if (!putRes.ok) throw new Error(`Failed to update criterion (${putRes.status})`);
+          const putJson: ApiResponse<unknown> = await putRes.json();
+          if (!putJson.success) throw new Error(putJson.message || 'Failed to update criterion');
 
           // Diff levels against the original criterion snapshot.
           const origCriterion = editRubric.criteria.find((c) => c.id === criterion.id);
@@ -270,7 +281,7 @@ export default function RubricsPage() {
 
           for (const level of criterion.levels) {
             if (level.id) {
-              // Update existing level (partial update — non-critical, ignore errors).
+              // Update existing level — best-effort, non-critical.
               await fetch(
                 `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${level.id}/`,
                 {
@@ -284,7 +295,7 @@ export default function RubricsPage() {
                 }
               ).catch(() => { /* non-critical */ });
             } else {
-              // Create new level.
+              // New level (no id) — create it via POST.
               const createRes = await fetch(
                 `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/`,
                 {
@@ -298,21 +309,23 @@ export default function RubricsPage() {
                 }
               );
               if (!createRes.ok) throw new Error(`Failed to create level (${createRes.status})`);
+              const createJson: ApiResponse<unknown> = await createRes.json();
+              if (!createJson.success) throw new Error(createJson.message || 'Failed to create level');
             }
           }
 
           // Delete levels removed in the editor.
-          // Best-effort: skip any level still referenced by a finding (FK constraint).
+          // Best-effort: a level referenced by a finding will fail the FK check — skip silently.
           for (const origLevel of (origCriterion?.levels ?? [])) {
             if (origLevel.id && !incomingLevelIds.has(origLevel.id)) {
               await fetch(
                 `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${origLevel.id}/`,
                 { method: 'DELETE' }
-              ).catch(() => { /* level may be referenced by a finding — skip */ });
+              ).catch(() => { /* level referenced by a finding — skip */ });
             }
           }
         } else {
-          // Create new criterion with its levels.
+          // New criterion (no id) — create it together with its levels.
           const postRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -324,6 +337,8 @@ export default function RubricsPage() {
             }),
           });
           if (!postRes.ok) throw new Error(`Failed to create criterion (${postRes.status})`);
+          const postJson: ApiResponse<unknown> = await postRes.json();
+          if (!postJson.success) throw new Error(postJson.message || 'Failed to create criterion');
         }
       }
 
@@ -336,6 +351,7 @@ export default function RubricsPage() {
       setEditRubric(null);
       await fetchRubrics();
     } catch (err) {
+      console.error('[handleEdit]', err);
       setActionError(err instanceof Error ? err.message : 'Failed to update rubric');
     } finally {
       setIsSaving(false);
@@ -956,7 +972,11 @@ export default function RubricsPage() {
                 criteria: editRubric.criteria,
               }}
               onSave={handleEdit}
-              onClose={() => setEditRubric(null)}
+              onClose={() => {
+                console.log('[Edit Modal] Closing edit modal, resetting isSaving');
+                setIsSaving(false);
+                setEditRubric(null);
+              }}
               isSaving={isSaving}
               headerTitle="Edit Rubric"
             />

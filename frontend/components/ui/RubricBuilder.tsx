@@ -136,7 +136,7 @@ const buildPayload = (rubric: InternalRubric): RubricData => ({
   title: rubric.title,
   description: rubric.description,
   criteria: rubric.criteria.map((c) => ({
-    // Preserve id so edit pages can diff existing vs new criteria
+    // Preserve id so the edit handler can diff existing vs new criteria
     ...(c.id !== undefined ? { id: c.id } : {}),
     title: c.title,
     description: c.description,
