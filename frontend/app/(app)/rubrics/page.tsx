@@ -185,19 +185,21 @@ export default function RubricsPage() {
     setActionError(null);
     setIsSaving(false);
     setEditFetching(true);
-    // Always fetch fresh data — bypass the cache so the modal never shows stale levels
-    setCriteriaCache((prev) => {
-      const next = { ...prev };
-      delete next[rubric.id];
-      return next;
-    });
-    const detail = await fetchRubricDetail(rubric.id);
-    setEditFetching(false);
-    if (!detail) {
+    // Fetch fresh data directly — do not go through the cache, which may be stale
+    // from a previous expand or save. The cache is updated after a successful fetch.
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/rubrics/${rubric.id}`);
+      if (!res.ok) throw new Error('Failed to load rubric details');
+      const json: ApiResponse<RubricDetail> = await res.json();
+      if (!json.success) throw new Error(json.message || 'Failed to load rubric details');
+      // Update cache with the fresh data so the expanded card is also up to date
+      setCriteriaCache((prev) => ({ ...prev, [rubric.id]: json.data }));
+      setEditRubric(json.data);
+    } catch {
       setActionError('Could not load rubric details for editing.');
-      return;
+    } finally {
+      setEditFetching(false);
     }
-    setEditRubric(detail);
   };
 
   const handleCreate = async (data: RubricData) => {
