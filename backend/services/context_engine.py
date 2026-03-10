@@ -15,6 +15,9 @@ from langchain_core.documents import Document
 
 from core.logging_config import logger
 
+# Type alias for documents: supports both dict and Document objects
+DocumentInput = dict | Document
+
 
 class ContextEngine:
     """
@@ -29,13 +32,15 @@ class ContextEngine:
         vector_store: FAISS index built from the provided documents.
     """
 
-    def __init__(self, documents: list[dict]):
+    def __init__(self, documents: list[DocumentInput], google_api_key: str = None):
         """
         Initialize the context engine with documents and build the FAISS index.
 
         Args:
             documents: List of document dicts with 'page_content' and 'metadata'
                     keys, or langchain Document objects.
+            google_api_key: Google API key for Gemini embeddings. If None, reads
+                            from settings.GEMINI_API_KEY (BYOK pattern).
 
         Raises:
             ValueError: If documents list is empty.
@@ -46,10 +51,11 @@ class ContextEngine:
         # Lazy import to avoid triggering pydantic validation at module level
         from core.settings import settings
 
-        # Always use API key from .env via settings
+        # BYOK: use provided key or fall back to environment config
+        api_key = google_api_key or settings.GEMINI_API_KEY
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=settings.EMBEDDING_MODEL,
-            google_api_key=settings.GEMINI_API_KEY,
+            google_api_key=api_key,
         )
 
         # Extract texts and metadatas from documents (support both dict and Document)
@@ -67,7 +73,7 @@ class ContextEngine:
         Args:
             query: Natural language query (e.g., "error handling requirements").
             k: Number of most similar document chunks to return.
-
+s
         Returns:
             List of dicts, each with 'page_content' and 'metadata' keys,
             ordered by relevance (most similar first).
@@ -87,7 +93,7 @@ class ContextEngine:
         )
         return context
 
-    def add_documents(self, documents: list[dict]) -> None:
+    def add_documents(self, documents: list[DocumentInput]) -> None:
         """
         Add new documents to the existing FAISS index.
 

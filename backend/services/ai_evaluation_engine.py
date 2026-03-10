@@ -22,6 +22,7 @@ from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
 from services.context_engine import ContextEngine
+from services.prompts import build_grading_prompt, build_summary_prompt
 import os
 
 
@@ -78,7 +79,7 @@ class AIEvaluationEngine:
             raise RuntimeError(Messages.AIRepository.CLONING_FAILED.format(
                 repo_url=repo_url, 
                 error=str(e)
-            ))
+            )) from e
 
         # 2. Load rubric criteria and levels
         try:
@@ -89,7 +90,7 @@ class AIEvaluationEngine:
             raise RuntimeError(Messages.AIRubric.LOADING_FAILED.format(
                 rubric_id=rubric_id, 
                 error=str(e)
-            ))
+            )) from e
 
         # 3. Build ContextEngine ONCE for all criteria (avoids re-vectorizing per criterion)
         try:
@@ -98,7 +99,7 @@ class AIEvaluationEngine:
             logger.info(f"ContextEngine built with {len(all_documents)} documents")
         except Exception as e:
             logger.error(f"Failed to build ContextEngine: {e}")
-            raise RuntimeError(f"Failed to build vector index: {str(e)}")
+            raise RuntimeError(f"Failed to build vector index: {str(e)}") from e
 
         # 4. Evaluate each criterion
         findings = []
@@ -239,10 +240,15 @@ class AIEvaluationEngine:
             Dictionary containing finding data or None if evaluation failed
         """
         # Prepare RAG context
-        context = self._prepare_rag_context(criterion, context_engine)
+        rag_context = self._prepare_rag_context(criterion, context_engine)
         
-        # Prepare prompt for AI
-        prompt = self._build_evaluation_prompt(criterion, context)
+        # Build prompt using centralized prompt templates
+        prompt = build_grading_prompt(
+            criterion=criterion,
+            levels=criterion['levels'],
+            briefing_context=rag_context['briefing'],
+            code_evidence=rag_context['code'],
+        )
         
         try:
             # Call AI provider API
@@ -264,7 +270,7 @@ class AIEvaluationEngine:
         self, 
         criterion: Dict[str, Any],
         context_engine: ContextEngine,
-    ) -> str:
+    ) -> Dict[str, str]:
         """
         Prepare RAG context using ContextEngine semantic search.
 
@@ -276,7 +282,7 @@ class AIEvaluationEngine:
             context_engine: Pre-built ContextEngine with all documents indexed
             
         Returns:
-            String containing relevant context for the evaluation
+            Dictionary with 'briefing' and 'code' context strings
         """
         # Search semantically using the pre-built index
         query = f"{criterion['title']}: {criterion['description']}"
@@ -286,26 +292,24 @@ class AIEvaluationEngine:
         briefing_results = [c for c in relevant_chunks if c['metadata'].get('type') in ('requirement', 'documentation')]
         code_results = [c for c in relevant_chunks if c['metadata'].get('type') not in ('requirement', 'documentation')]
 
+        # Limit context size to avoid exceeding model token limits
+        max_chunks = settings.RAG_MAX_CHUNKS
+        max_chars = settings.RAG_MAX_CHUNK_CHARS
+
         briefing_context = "\n\n".join([
-            f"Requirement {i+1}: {c['page_content']}"
-            for i, c in enumerate(briefing_results)
+            f"Requirement {i+1}: {c['page_content'][:max_chars]}"
+            for i, c in enumerate(briefing_results[:max_chunks])
         ]) or "No relevant requirements found."
 
         code_context = "\n\n".join([
-            f"File {i+1} ({c['metadata'].get('file_path', 'unknown')}): {c['page_content']}"
-            for i, c in enumerate(code_results)
+            f"File {i+1} ({c['metadata'].get('file_path', 'unknown')}): {c['page_content'][:max_chars]}"
+            for i, c in enumerate(code_results[:max_chunks])
         ]) or "No relevant code found."
 
-        return f"""
-        CRITERION: {criterion['title']}
-        DESCRIPTION: {criterion['description']}
-        
-        RELEVANT REQUIREMENTS:
-        {briefing_context}
-        
-        RELEVANT CODE SAMPLES:
-        {code_context}
-        """
+        return {
+            'briefing': briefing_context,
+            'code': code_context,
+        }
 
     def _build_evaluation_prompt(self, criterion: Dict[str, Any], context: str) -> str:
         """
@@ -424,38 +428,22 @@ class AIEvaluationEngine:
         Returns:
             String containing the AI-generated summary
         """
-        # Prepare findings summary
-        findings_summary = []
+        # Prepare findings for summary prompt
+        findings_for_summary = []
         for finding in findings:
-            level_info = f"Score: {finding.get('score_points', 0)} points"
-            evidence = finding.get('evidence_snippet', 'No evidence provided')
-            improvement = finding.get('improvement_suggestion', 'No improvement suggested')
-            
-            findings_summary.append(f"""
-            - {finding.get('criterion_id', 'Unknown criterion')}: {level_info}
-              Evidence: {evidence[:200]}...
-              Improvement: {improvement[:200]}...
-            """)
+            findings_for_summary.append({
+                'criterion_title': finding.get('criterion_id', 'Unknown'),
+                'score_points': finding.get('score_points', 0),
+                'evidence': finding.get('evidence_snippet', 'No evidence provided'),
+                'improvement': finding.get('improvement_suggestion', 'No improvement suggested'),
+            })
         
-        prompt = f"""
-        Generate a comprehensive evaluation summary for a student project.
-
-        REPOSITORY: {repo_url}
-        RUBRIC: {rubric_title}
-        OVERALL SCORE: {total_score:.2f}/10
-
-        DETAILED FINDINGS:
-        {chr(10).join(findings_summary)}
-
-        INSTRUCTIONS:
-        1. Provide an overall assessment of the project quality
-        2. Highlight the strongest aspects of the implementation
-        3. Identify the most critical areas for improvement
-        4. Provide actionable recommendations for the student
-        5. Keep the tone constructive and educational
-
-        FORMAT: Write a 3-4 paragraph summary suitable for student feedback.
-        """
+        prompt = build_summary_prompt(
+            repo_url=repo_url,
+            rubric_title=rubric_title,
+            findings_summary=findings_for_summary,
+            total_score=total_score,
+        )
 
         try:
             response_text = self.ai_client.chat(prompt)
@@ -509,7 +497,7 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
             logger.error(f"Failed to parse briefing snapshot for evaluation {evaluation_id}: {e}")
             raise RuntimeError(Messages.AIEvaluation.PARSING_RESPONSE_FAILED.format(
                 error=str(e)
-            ))
+            )) from e
 
         # 4. Run AI evaluation
         try:

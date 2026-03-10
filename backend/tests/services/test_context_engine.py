@@ -72,7 +72,7 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("GEMINI_MODEL", "gemini-pro")
     monkeypatch.setenv("GROK_API_KEY", "fake-grok-key")
     monkeypatch.setenv("GROK_MODEL", "grok-1")
-    monkeypatch.setenv("EMBEDDING_MODEL", "models/text-embedding-004")
+    monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-3-small")
     # Force Settings to re-read from patched env
     import importlib
     import core.settings
@@ -87,7 +87,7 @@ def engine(fake_embeddings):
     docs = _sample_dicts(5)
 
     with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
-        return ContextEngine(documents=docs)
+        return ContextEngine(documents=docs, google_api_key="fake-gemini-key")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ class TestInit:
 
         with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
             with pytest.raises(ValueError, match="empty"):
-                ContextEngine(documents=[])
+                ContextEngine(documents=[], google_api_key="fake-gemini-key")
 
     def test_init_accepts_document_objects(self, fake_embeddings):
         """Verify constructor works with langchain Document objects too."""
@@ -118,7 +118,7 @@ class TestInit:
         docs = _sample_documents(3)
 
         with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
-            engine = ContextEngine(documents=docs)
+            engine = ContextEngine(documents=docs, google_api_key="fake-gemini-key")
 
         assert engine.vector_store is not None
 
