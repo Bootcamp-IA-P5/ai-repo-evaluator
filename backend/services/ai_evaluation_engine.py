@@ -463,7 +463,13 @@ class AIEvaluationEngine:
             return f"Summary generation failed: {str(e)}"
 
 
-def run_evaluation_task(evaluation_id: int, db_url: str):
+def run_evaluation_task(
+    evaluation_id: int, 
+    db_url: str,
+    ai_provider: str = None,
+    ai_model: str = None,
+    ai_api_key: str = None
+):
     """
     Background task for running the AI evaluation process.
 
@@ -474,6 +480,9 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
     Args:
         evaluation_id: The ID of the evaluation to process
         db_url: Database URL for creating a new session
+        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_model: Specific model for the provider - optional
+        ai_api_key: API key for the provider - optional
     """
     # Create a new database session for the background task
     db = SessionLocal()
@@ -492,11 +501,16 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
         # 2. Initialize AI evaluation engine
-        ai_engine = AIEvaluationEngine(
-            provider=AIProvider(evaluation.ai_provider),
-            model=evaluation.ai_model,
-            api_key=evaluation.ai_api_key
-        )
+        # Use provided AI configuration or default to settings
+        if ai_provider and ai_model and ai_api_key:
+            ai_engine = AIEvaluationEngine(
+                provider=AIProvider(ai_provider),
+                model=ai_model,
+                api_key=ai_api_key
+            )
+        else:
+            # Use default configuration from settings
+            ai_engine = AIEvaluationEngine()
 
         # 3. Parse briefing chunks from snapshot
         try:
