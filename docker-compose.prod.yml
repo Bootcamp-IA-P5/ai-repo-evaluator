@@ -31,8 +31,6 @@ services:
     restart: always
     env_file:
       - ./backend/.env.prod
-    volumes:
-      - shared_data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -60,8 +58,6 @@ services:
     restart: always
     env_file:
       - ./frontend/.env.prod
-    volumes:
-      - shared_data:/data
     depends_on:
       backend:
         condition: service_healthy
@@ -87,4 +83,3 @@ networks:
 
 volumes:
   postgres_data_prod:
-  shared_data:

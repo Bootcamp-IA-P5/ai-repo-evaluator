@@ -13,6 +13,7 @@ import {
 } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import type { SelectOption } from '@/components/ui';
+import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services/file-upload';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -44,7 +45,7 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
 
 // Server-side directory where briefing PDFs are stored.
 // Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
-const BRIEFINGS_SERVER_DIR = '/data/briefings';
+const BRIEFINGS_SERVER_DIR = '/tmp/briefings';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +59,7 @@ interface RubricOption {
 interface FormState {
   rubricId: string;
   briefingFile: File | null;
+  briefingServerPath: string;
   repoUrl: string;
   provider: string;
   model: string;
@@ -78,6 +80,7 @@ export default function NewEvaluationPage() {
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
+    briefingServerPath: '',
     repoUrl: '',
     provider: '',
     model: '',
@@ -89,6 +92,10 @@ export default function NewEvaluationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Load rubrics on mount
   useEffect(() => {
@@ -122,6 +129,46 @@ export default function NewEvaluationPage() {
     setForm((prev) => ({ ...prev, provider: value, model: '' }));
   };
 
+  // Handle file upload when a file is selected
+  const handleFileUpload = async (file: File | null) => {
+    if (!file) {
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      setUploadError(null);
+      return;
+    }
+
+    // Validate file before upload
+    const validation = validateFile(file, 5, ['.pdf']);
+    if (!validation.isValid) {
+      setUploadError(validation.error);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const response = await uploadBriefingFile(file);
+      
+      if (response.success && response.data) {
+        setForm((prev) => ({ 
+          ...prev, 
+          briefingFile: file, 
+          briefingServerPath: response.data!.file_path 
+        }));
+      } else {
+        throw new Error(response.message || 'Upload failed');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setUploadError(errorMessage);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -129,10 +176,12 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // The backend expects JSON with { rubric_id, repo_url, briefing_path }.
-      // briefing_path must be a server-side absolute path; we derive it from
-      // the selected file's name using the configured server directory.
-      const briefingPath = `${BRIEFINGS_SERVER_DIR}/${form.briefingFile!.name}`;
+      // Use the uploaded file path instead of constructing it
+      const briefingPath = form.briefingServerPath;
+
+      if (!briefingPath) {
+        throw new Error('Please upload a briefing file before submitting');
+      }
 
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
@@ -158,7 +207,7 @@ export default function NewEvaluationPage() {
       }
 
       setSubmitSuccess(true);
-      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: '', model: '', apiKey: '' });
+      setForm({ rubricId: '', briefingFile: null, briefingServerPath: '', repoUrl: '', provider: '', model: '', apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -202,6 +251,15 @@ export default function NewEvaluationPage() {
         />
       )}
 
+      {uploadError && (
+        <Alert
+          variant="error"
+          message={uploadError}
+          className="mb-6"
+          onDismiss={() => setUploadError(null)}
+        />
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -226,10 +284,8 @@ export default function NewEvaluationPage() {
             <FileUpload
               label="Project Briefing (PDF)"
               accept=".pdf"
-              maxSize={10}
-              onFileSelect={(file) =>
-                setForm((prev) => ({ ...prev, briefingFile: file }))
-              }
+              maxSize={5}
+              onFileSelect={handleFileUpload}
             />
 
             {/* GitHub Repository URL */}

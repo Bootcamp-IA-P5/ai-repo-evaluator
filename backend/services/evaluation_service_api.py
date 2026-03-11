@@ -6,6 +6,7 @@ including the background task for long-running AI evaluation processing.
 """
 
 import json
+import os
 from typing import List
 from sqlalchemy.orm import Session
 from fastapi import BackgroundTasks
@@ -86,6 +87,7 @@ class EvaluationServiceAPI:
                 )
             except Exception as e:
                 logger.error(f"Failed to process briefing: {e}")
+                os.remove(evaluation_request.briefing_path)
                 return APIResponse(
                     success=False,
                     data=None,
@@ -119,6 +121,7 @@ class EvaluationServiceAPI:
                 ai_api_key=evaluation_request.ai_api_key,
             )
 
+            os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=True,
                 data=evaluation_response,
@@ -128,6 +131,7 @@ class EvaluationServiceAPI:
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to create evaluation: {e}")
+            os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=False,
                 data=None,

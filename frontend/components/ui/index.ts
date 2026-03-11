@@ -63,3 +63,6 @@ export type {
   RubricCriterion,
   RubricLevel,
 } from './RubricBuilder';
+
+export { MarkdownRenderer } from './MarkdownRenderer';
+export type { MarkdownRendererProps } from './MarkdownRenderer';

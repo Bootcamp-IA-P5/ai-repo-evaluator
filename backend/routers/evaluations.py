@@ -182,7 +182,7 @@ def get_evaluation(
                             "value": {
                                 "repo_url": "https://github.com/student/backend-project",
                                 "rubric_id": 1,
-                                "briefing_path": "/data/briefings/project-briefing.pdf"
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf"
                             }
                         },
                         "openai_evaluation": {
@@ -191,7 +191,7 @@ def get_evaluation(
                             "value": {
                                 "repo_url": "https://github.com/student/backend-project",
                                 "rubric_id": 1,
-                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                                 "ai_provider": "openai",
                                 "ai_model": "gpt-4"
                             }
@@ -202,7 +202,7 @@ def get_evaluation(
                             "value": {
                                 "repo_url": "https://github.com/student/backend-project",
                                 "rubric_id": 1,
-                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                                 "ai_provider": "gemini",
                                 "ai_model": "gemini-1.5-pro"
                             }
@@ -213,7 +213,7 @@ def get_evaluation(
                             "value": {
                                 "repo_url": "https://github.com/student/backend-project",
                                 "rubric_id": 1,
-                                "briefing_path": "/data/briefings/project-briefing.pdf",
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                                 "ai_provider": "grok",
                                 "ai_model": "grok-beta"
                             }
