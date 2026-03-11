@@ -132,7 +132,7 @@ class GitLoaderService:
 
                 filepath = os.path.join(root, filename)
                 try:
-                    loader = GenericLoader.from_path(
+                    loader = GenericLoader.from_filesystem(
                         root,
                         glob=filename,
                         suffixes=[ext],

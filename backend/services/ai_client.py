@@ -64,7 +64,10 @@ class AIClient:
         self.model = model
         self.api_key = api_key
         self.client = self._get_client()
-        logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5]}")
+        if api_key is None:
+            logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key}")
+        else:
+            logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5]}")
         logger.debug(f"Client: {self.client}")
 
     def _get_client(self):

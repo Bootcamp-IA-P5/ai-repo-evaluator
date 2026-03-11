@@ -13,6 +13,7 @@ import {
 } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import type { SelectOption } from '@/components/ui';
+import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services/file-upload';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -48,9 +49,9 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
-// Default provider and model used when the user does not change the selection.
-const DEFAULT_PROVIDER = 'gemini';
-const DEFAULT_MODEL    = 'gemini-2.5-flash';
+// Server-side directory where briefing PDFs are stored.
+// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
+const BRIEFINGS_SERVER_DIR = '/tmp/briefings';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,6 +65,7 @@ interface RubricOption {
 interface FormState {
   rubricId: string;
   briefingFile: File | null;
+  briefingServerPath: string;
   repoUrl: string;
   provider: string;
   model: string;
@@ -84,6 +86,7 @@ export default function NewEvaluationPage() {
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
+    briefingServerPath: '',
     repoUrl: '',
     provider: DEFAULT_PROVIDER,
     model: DEFAULT_MODEL,
@@ -95,6 +98,10 @@ export default function NewEvaluationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Load rubrics on mount
   useEffect(() => {
@@ -125,8 +132,47 @@ export default function NewEvaluationPage() {
 
   // When provider changes, auto-select the first model of that provider.
   const handleProviderChange = (value: string) => {
-    const firstModel = MODELS_BY_PROVIDER[value]?.[0]?.value ?? '';
-    setForm((prev) => ({ ...prev, provider: value, model: firstModel }));
+    setForm((prev) => ({ ...prev, provider: value, model: '' }));
+  };
+
+  // Handle file upload when a file is selected
+  const handleFileUpload = async (file: File | null) => {
+    if (!file) {
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      setUploadError(null);
+      return;
+    }
+
+    // Validate file before upload
+    const validation = validateFile(file, 5, ['.pdf']);
+    if (!validation.isValid) {
+      setUploadError(validation.error);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const response = await uploadBriefingFile(file);
+      
+      if (response.success && response.data) {
+        setForm((prev) => ({ 
+          ...prev, 
+          briefingFile: file, 
+          briefingServerPath: response.data!.file_path 
+        }));
+      } else {
+        throw new Error(response.message || 'Upload failed');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setUploadError(errorMessage);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,30 +182,13 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // Step 1 — Upload the PDF to the shared briefings volume via the Next.js
-      // route handler. The handler saves the file to /data/briefings (mounted
-      // in both containers) and returns the server-side absolute path.
-      const uploadForm = new FormData();
-      uploadForm.append('file', form.briefingFile!);
+      // Use the uploaded file path instead of constructing it
+      const briefingPath = form.briefingServerPath;
 
-      const uploadRes = await fetch('/api/upload-briefing', {
-        method: 'POST',
-        body: uploadForm,
-      });
-
-      const uploadData = await uploadRes.json().catch(() => ({})) as {
-        success?: boolean;
-        message?: string;
-        data?: { path: string; name: string };
-      };
-
-      if (!uploadRes.ok || uploadData.success === false) {
-        throw new Error(uploadData.message ?? 'Failed to upload briefing PDF');
+      if (!briefingPath) {
+        throw new Error('Please upload a briefing file before submitting');
       }
 
-      const briefingPath = uploadData.data!.path;
-
-      // Step 2 — Create the evaluation with the confirmed server-side path.
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,8 +213,7 @@ export default function NewEvaluationPage() {
       }
 
       setSubmitSuccess(true);
-      // Reset to Gemini defaults so the button stays enabled after a submission.
-      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: DEFAULT_PROVIDER, model: DEFAULT_MODEL, apiKey: '' });
+      setForm({ rubricId: '', briefingFile: null, briefingServerPath: '', repoUrl: '', provider: '', model: '', apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -228,6 +256,15 @@ export default function NewEvaluationPage() {
         />
       )}
 
+      {uploadError && (
+        <Alert
+          variant="error"
+          message={uploadError}
+          className="mb-6"
+          onDismiss={() => setUploadError(null)}
+        />
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -252,10 +289,8 @@ export default function NewEvaluationPage() {
             <FileUpload
               label="Project Briefing (PDF)"
               accept=".pdf"
-              maxSize={10}
-              onFileSelect={(file) =>
-                setForm((prev) => ({ ...prev, briefingFile: file }))
-              }
+              maxSize={5}
+              onFileSelect={handleFileUpload}
             />
 
             {/* GitHub Repository URL */}

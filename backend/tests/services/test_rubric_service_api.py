@@ -223,6 +223,72 @@ class TestRubricServiceAPICreate:
         assert isinstance(response.data, RubricResponseWithCriteria)
         assert response.data.title == "New Rubric"
         assert response.data.description == "A new rubric for testing"
+
+    def test_create_duplicate_title_fails(
+        self, db_session: Session, sample_rubrics: list, rubric_service: RubricServiceAPI
+    ):
+        """Test that creating a rubric with a duplicate title fails."""
+        from schemas.rubric import RubricRequest
+        
+        # Try to create a rubric with the same title as an existing one
+        rubric_request = RubricRequest(
+            title="Rubric 1",  # This title already exists in sample_rubrics
+            description="Duplicate rubric",
+        )
+        
+        response = rubric_service.create(db_session, rubric_request)
+        
+        assert response.success is False
+        assert response.data is None
+        assert Messages.Rubric.DUPLICATE_TITLE in response.errors
+        assert response.message == Messages.Rubric.DUPLICATE_TITLE
+
+    def test_create_duplicate_title_case_insensitive_fails(
+        self, db_session: Session, sample_rubrics: list, rubric_service: RubricServiceAPI
+    ):
+        """Test that creating a rubric with a duplicate title (different case) fails."""
+        from schemas.rubric import RubricRequest
+        
+        # Try to create a rubric with the same title but different case
+        rubric_request = RubricRequest(
+            title="RUBRIC 1",  # This should match "Rubric 1" case-insensitively
+            description="Duplicate rubric with different case",
+        )
+        
+        response = rubric_service.create(db_session, rubric_request)
+        
+        assert response.success is False
+        assert response.data is None
+        assert Messages.Rubric.DUPLICATE_TITLE in response.errors
+        assert response.message == Messages.Rubric.DUPLICATE_TITLE
+
+    def test_create_rubric_with_whitespace_in_title(
+        self, db_session: Session, rubric_service: RubricServiceAPI
+    ):
+        """Test that rubrics with whitespace in titles are handled correctly."""
+        from schemas.rubric import RubricRequest
+        
+        # Create a rubric with whitespace in the title
+        rubric_request = RubricRequest(
+            title="  Test Rubric  ",  # Title with leading/trailing whitespace
+            description="Rubric with whitespace",
+        )
+        
+        response = rubric_service.create(db_session, rubric_request)
+        
+        assert response.success is True
+        assert response.data.title == "  Test Rubric  "  # Whitespace preserved
+        
+        # Try to create another rubric with the same title (including whitespace)
+        rubric_request2 = RubricRequest(
+            title="  Test Rubric  ",
+            description="Another rubric with same title",
+        )
+        
+        response2 = rubric_service.create(db_session, rubric_request2)
+        
+        assert response2.success is False
+        assert Messages.Rubric.DUPLICATE_TITLE in response2.errors
         assert response.data.id is not None
         assert response.errors is None
         assert response.message == Messages.Rubric.CREATED
@@ -269,6 +335,10 @@ class TestRubricServiceAPICreate:
         from schemas.rubric import RubricRequest
 
         mock_session = MagicMock(spec=Session)
+        # Mock the query to return None (no existing rubric) but add to fail
+        mock_query = MagicMock()
+        mock_query.filter.return_value.first.return_value = None
+        mock_session.query.return_value = mock_query
         mock_session.add.side_effect = Exception("Database error")
 
         rubric_request = RubricRequest(title="Test")

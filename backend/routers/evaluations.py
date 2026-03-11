@@ -6,8 +6,7 @@ using dependency injection for both database sessions and service instances.
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, status, BackgroundTasks
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status, BackgroundTasks, Header, HTTPException
 
 from core.database import get_db, SQLALCHEMY_DATABASE_URL
 from core.settings import settings
@@ -18,6 +17,7 @@ from schemas.evaluation import (
     EvaluationResponseWithFindings,
 )
 from services.evaluation_service_api import EvaluationServiceAPI
+from sqlalchemy.orm import Session
 
 
 # Router configuration
@@ -72,6 +72,21 @@ def get_evaluation_service_api() -> EvaluationServiceAPI:
         EvaluationServiceAPI: A new service instance
     """
     return EvaluationServiceAPI()
+
+
+def extract_api_key_from_header(
+    api_key: str = Header(None, alias="X-API-Key")
+):
+    """
+    Extract API key from X-API-Key header.
+    
+    Args:
+        api_key: API key from X-API-Key header
+        
+    Returns:
+        API key string if provided, None otherwise
+    """
+    return api_key
 
 
 # =============================================================================
@@ -156,10 +171,63 @@ def get_evaluation(
         },
         422: RESPONSE_422,
     },
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "basic_evaluation": {
+                            "summary": "Basic evaluation (no AI configuration)",
+                            "description": "Create an evaluation using default AI settings",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf"
+                            }
+                        },
+                        "openai_evaluation": {
+                            "summary": "Evaluation with OpenAI configuration",
+                            "description": "Create an evaluation using OpenAI GPT-4 (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                                "ai_provider": "openai",
+                                "ai_model": "gpt-4"
+                            }
+                        },
+                        "gemini_evaluation": {
+                            "summary": "Evaluation with Gemini configuration",
+                            "description": "Create an evaluation using Google Gemini (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                                "ai_provider": "gemini",
+                                "ai_model": "gemini-1.5-pro"
+                            }
+                        },
+                        "grok_evaluation": {
+                            "summary": "Evaluation with Grok configuration",
+                            "description": "Create an evaluation using Grok (API key via X-API-Key header)",
+                            "value": {
+                                "repo_url": "https://github.com/student/backend-project",
+                                "rubric_id": 1,
+                                "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                                "ai_provider": "grok",
+                                "ai_model": "grok-beta"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
 )
 def create_evaluation(
     evaluation_request: EvaluationRequest,
     background_tasks: BackgroundTasks,
+    api_key: str = Depends(extract_api_key_from_header),
     db: Session = Depends(get_db),
     evaluation_service: EvaluationServiceAPI = Depends(get_evaluation_service_api),
 ):
@@ -178,7 +246,22 @@ def create_evaluation(
     - 'processing': AI evaluation in progress
     - 'completed': Evaluation finished successfully
     - 'failed': Evaluation encountered an error
+
+    AI Configuration:
+    - AI provider, model, and API key can be specified in the request body
+    - API key can also be provided via X-API-Key header (recommended for security)
+    - If AI configuration is provided, all three fields (provider, model, api_key) must be present
     """
+    # Merge header API key with request body if AI configuration is provided
+    if evaluation_request.ai_provider and evaluation_request.ai_model:
+        if not evaluation_request.ai_api_key and not api_key:
+            raise HTTPException(
+                status_code=422,
+                detail="ai_api_key is required when ai_provider and ai_model are specified"
+            )
+        # Use header API key if provided, otherwise use body API key
+        evaluation_request.ai_api_key = api_key or evaluation_request.ai_api_key
+    
     return evaluation_service.create(
         db=db,
         evaluation_request=evaluation_request,

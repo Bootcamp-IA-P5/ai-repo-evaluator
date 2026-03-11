@@ -19,6 +19,7 @@ import {
   BookOpen,
   AlertTriangle,
 } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // ---------------------------------------------------------------------------
 // Types — aligned with backend schemas/evaluation.py + schemas/rubric.py
@@ -417,9 +418,7 @@ export default function EvaluationDetailPage() {
             <Lightbulb className="w-4 h-4 text-yellow-500" />
             AI Summary
           </h2>
-          <div className="text-sm text-gray-700 leading-relaxed prose prose-sm prose-gray max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation.ai_summary}</ReactMarkdown>
-          </div>
+          <MarkdownRenderer content={evaluation.ai_summary} />
         </div>
       )}
 
@@ -506,9 +505,9 @@ export default function EvaluationDetailPage() {
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                             Evidence
                           </p>
-                          <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap wrap-break-word leading-relaxed">
-                            {finding.evidence_snippet}
-                          </pre>
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 overflow-x-auto">
+                            <MarkdownRenderer content={finding.evidence_snippet} />
+                          </div>
                         </div>
                       )}
 

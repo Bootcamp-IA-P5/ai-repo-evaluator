@@ -6,6 +6,7 @@ including the background task for long-running AI evaluation processing.
 """
 
 import json
+import os
 from typing import List
 from sqlalchemy.orm import Session
 from fastapi import BackgroundTasks
@@ -86,6 +87,7 @@ class EvaluationServiceAPI:
                 )
             except Exception as e:
                 logger.error(f"Failed to process briefing: {e}")
+                os.remove(evaluation_request.briefing_path)
                 return APIResponse(
                     success=False,
                     data=None,
@@ -114,8 +116,12 @@ class EvaluationServiceAPI:
                 run_evaluation_task,
                 evaluation_id=evaluation.id,
                 db_url=db_url,
+                ai_provider=evaluation_request.ai_provider,
+                ai_model=evaluation_request.ai_model,
+                ai_api_key=evaluation_request.ai_api_key,
             )
 
+            os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=True,
                 data=evaluation_response,
@@ -125,6 +131,7 @@ class EvaluationServiceAPI:
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to create evaluation: {e}")
+            os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=False,
                 data=None,
@@ -218,7 +225,13 @@ class EvaluationServiceAPI:
 # =============================================================================
 
 
-def run_evaluation_task(evaluation_id: int, db_url: str):
+def run_evaluation_task(
+    evaluation_id: int, 
+    db_url: str,
+    ai_provider: str = None,
+    ai_model: str = None,
+    ai_api_key: str = None
+):
     """
     Background task for running the AI evaluation process.
 
@@ -229,6 +242,9 @@ def run_evaluation_task(evaluation_id: int, db_url: str):
     Args:
         evaluation_id: The ID of the evaluation to process
         db_url: Database URL for creating a new session
+        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_model: Specific model for the provider - optional
+        ai_api_key: API key for the provider - optional
     """
     # Create a new database session for the background task
     db = SessionLocal()

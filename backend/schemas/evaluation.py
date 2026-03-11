@@ -7,7 +7,8 @@ including request/response schemas for the evaluation lifecycle.
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic import field_validator
 
 
 # =============================================================================
@@ -23,11 +24,47 @@ class EvaluationRequest(BaseModel):
         repo_url: URL of the GitHub repository to evaluate
         rubric_id: ID of the rubric to use for evaluation
         briefing_path: Path to the briefing PDF file
+        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_model: Specific model for the provider - optional
+        ai_api_key: API key for the provider - optional
     """
 
     repo_url: str
     rubric_id: int
     briefing_path: str
+    ai_provider: Optional[str] = Field(None, description="AI provider: openai, gemini, or grok")
+    ai_model: Optional[str] = Field(None, description="Specific model for the selected provider")
+    ai_api_key: Optional[str] = Field(None, description="API key for the selected provider")
+
+    @field_validator('ai_provider')
+    @classmethod
+    def validate_ai_provider(cls, v):
+        """Validate that ai_provider is one of the supported providers."""
+        if v is not None:
+            valid_providers = ['openai', 'gemini', 'grok']
+            if v not in valid_providers:
+                raise ValueError(f"ai_provider must be one of: {', '.join(valid_providers)}")
+        return v
+
+    @field_validator('ai_model')
+    @classmethod
+    def validate_ai_model(cls, v, info):
+        """Validate that ai_model is provided when ai_provider is specified."""
+        # Get the ai_provider value from the current instance
+        ai_provider = info.data.get('ai_provider')
+        if ai_provider is not None and v is None:
+            raise ValueError("ai_model is required when ai_provider is specified")
+        return v
+
+    @field_validator('ai_api_key')
+    @classmethod
+    def validate_ai_api_key(cls, v, info):
+        """Validate that ai_api_key is provided when ai_provider is specified."""
+        # Get the ai_provider value from the current instance
+        ai_provider = info.data.get('ai_provider')
+        if ai_provider is not None and v is None:
+            raise ValueError("ai_api_key is required when ai_provider is specified")
+        return v
 
     model_config = {
         "json_schema_extra": {
@@ -35,7 +72,23 @@ class EvaluationRequest(BaseModel):
                 {
                     "repo_url": "https://github.com/student/backend-project",
                     "rubric_id": 1,
-                    "briefing_path": "/data/briefings/project-briefing.pdf",
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                },
+                {
+                    "repo_url": "https://github.com/student/backend-project",
+                    "rubric_id": 1,
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                    "ai_provider": "openai",
+                    "ai_model": "gpt-4",
+                    "ai_api_key": "sk-example-api-key"
+                },
+                {
+                    "repo_url": "https://github.com/student/backend-project",
+                    "rubric_id": 1,
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
+                    "ai_provider": "gemini",
+                    "ai_model": "gemini-1.5-pro",
+                    "ai_api_key": "AIza-example-api-key"
                 }
             ]
         }
