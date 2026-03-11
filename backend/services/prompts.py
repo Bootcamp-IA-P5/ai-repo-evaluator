@@ -28,7 +28,8 @@ YOUR RULES:
 3. You MUST select exactly one scoring level from the provided options.
 4. You MUST respond with valid JSON — no markdown, no explanation outside the JSON.
 5. Be fair and constructive. Acknowledge what the student did well before suggesting improvements.
-6. If you cannot find relevant code for a criterion, select the lowest level and explain why in "evidence"."""
+6. If you cannot find relevant code for a criterion, select the lowest level and explain why in "evidence".
+7. LANGUAGE: Write ALL content values (evidence, improvement) in SPANISH (Castellano). Keep JSON keys in English."""
 
 
 # JSON OUTPUT SCHEMA — What the AI must return
@@ -56,10 +57,8 @@ def build_grading_prompt(
         criterion: Dict with 'title', 'description', and 'weight' keys.
         levels: List of dicts, each with 'id', 'title', 'description',
                 and 'score_points' keys.
-        briefing_context: Relevant excerpts from the project briefing
-                          (retrieved via ContextEngine).
-        code_evidence: Relevant code snippets from the repository
-                       (retrieved via ContextEngine).
+        briefing_context: Relevant excerpts from the project briefing (retrieved via ContextEngine).
+        code_evidence: Relevant code snippets from the repository (retrieved via ContextEngine).
 
     Returns:
         Complete prompt string ready to send to the LLM.
@@ -73,9 +72,9 @@ def build_grading_prompt(
     return f"""{SYSTEM_PROMPT}
 
 CRITERION TO EVALUATE:
-  Title: {criterion['title']}
-  Description: {criterion['description']}
-  Weight: {criterion.get('weight', 1.0)}
+    Title: {criterion['title']}
+    Description: {criterion['description']}
+    Weight: {criterion.get('weight', 1.0)}
 
 SCORING LEVELS (select exactly ONE by its ID):
 {levels_text}
@@ -110,7 +109,7 @@ def build_summary_prompt(
         repo_url: URL of the evaluated repository.
         rubric_title: Title of the rubric used for evaluation.
         findings_summary: List of dicts with 'criterion_title',
-                          'score_points', 'evidence', and 'improvement' keys.
+                        'score_points', 'evidence', and 'improvement' keys.
         total_score: Aggregated weighted score.
 
     Returns:
@@ -120,8 +119,8 @@ def build_summary_prompt(
     findings_text = "\n".join(
         f"  - {f.get('criterion_title', 'Unknown')}: "
         f"{f.get('score_points', 0)} pts — "
-        f"Evidence: {str(f.get('evidence', 'N/A'))[:200]} | "
-        f"Improvement: {str(f.get('improvement', 'N/A'))[:200]}"
+        f"Evidence: {str(f.get('evidence', 'N/A'))[:500]} | "
+        f"Improvement: {str(f.get('improvement', 'N/A'))[:500]}"
         for f in findings_summary
     )
 
@@ -141,5 +140,6 @@ INSTRUCTIONS:
 4. Identify the most critical areas for improvement.
 5. End with actionable recommendations.
 6. Keep the tone CONSTRUCTIVE and EDUCATIONAL — this is a learning experience.
+7. Write the ENTIRE summary in SPANISH (Castellano).
 
 Write the summary in plain text (no JSON, no markdown)."""
