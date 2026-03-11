@@ -20,10 +20,9 @@ import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services
 // ---------------------------------------------------------------------------
 
 const AI_PROVIDERS: SelectOption[] = [
-  { value: 'gemini',    label: 'Gemini (Google)' },
-  { value: 'groq',      label: 'Groq' },
-  { value: 'openai',    label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'gemini', label: 'Gemini (Google)' },
+  { value: 'groq',   label: 'Groq' },
+  { value: 'openai', label: 'OpenAI' },
 ];
 
 const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
@@ -38,14 +37,9 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
     { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
   ],
   openai: [
-    { value: 'gpt-4o',       label: 'GPT-4o' },
-    { value: 'gpt-4o-mini',  label: 'GPT-4o Mini' },
-    { value: 'gpt-4-turbo',  label: 'GPT-4 Turbo' },
-  ],
-  anthropic: [
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022',  label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229',     label: 'Claude 3 Opus' },
+    { value: 'gpt-4o',      label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
   ],
 };
 
