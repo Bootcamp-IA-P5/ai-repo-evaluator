@@ -43,10 +43,6 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
-// Server-side directory where briefing PDFs are stored.
-// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
-const BRIEFINGS_SERVER_DIR = '/tmp/briefings';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -221,9 +217,10 @@ export default function NewEvaluationPage() {
   }));
 
   // Provider and model are optional — the backend uses Gemini by default when omitted.
+  // briefingServerPath is set only after a successful upload, so it is the right guard.
   const isFormValid =
     form.rubricId !== '' &&
-    form.briefingFile !== null &&
+    form.briefingServerPath !== '' &&
     form.repoUrl.trim() !== '';
 
   return (
