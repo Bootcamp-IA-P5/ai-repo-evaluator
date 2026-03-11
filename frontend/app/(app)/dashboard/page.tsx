@@ -35,7 +35,7 @@ interface RubricSummary {
 // ---------------------------------------------------------------------------
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString('es-ES', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -78,6 +78,17 @@ function statusClass(status: EvaluationResponse['status']): string {
     default:
       return 'bg-gray-100 text-gray-500';
   }
+}
+
+/** Maps API status values to their Spanish display labels. */
+function translateStatus(status: string): string {
+  const map: Record<string, string> = {
+    pending:    'Pendiente',
+    processing: 'Procesando',
+    completed:  'Completado',
+    failed:     'Fallido',
+  };
+  return map[status] ?? status;
 }
 
 // ---------------------------------------------------------------------------
@@ -168,8 +179,8 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
       <PageHeader
-        title="Dashboard"
-        description="Overview of evaluation activity and recent results"
+        title="Panel"
+        description="Resumen de la actividad de evaluación y resultados recientes"
       />
 
       <div className="flex-1 px-6 py-8 space-y-8 max-w-7xl w-full mx-auto">
@@ -177,7 +188,7 @@ export default function DashboardPage() {
         {/* ── Error state ─────────────────────────────────────────────── */}
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-6 py-4 text-red-700 text-sm">
-            Failed to load dashboard data. Please refresh the page.
+            Error al cargar los datos. Por favor, recarga la página.
           </div>
         )}
 
@@ -192,11 +203,11 @@ export default function DashboardPage() {
               </div>
               <span className="flex items-center gap-1 text-xs font-medium text-green-600">
                 <TrendingUp className="w-3.5 h-3.5" />
-                All time
+                Histórico
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Total Evaluations</p>
+              <p className="text-sm text-gray-500 mb-1">Total de Evaluaciones</p>
               {loading ? (
                 <div className="h-9 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
@@ -215,11 +226,11 @@ export default function DashboardPage() {
               </div>
               <span className="flex items-center gap-1 text-xs font-medium text-green-600">
                 <TrendingUp className="w-3.5 h-3.5" />
-                Completed only
+                Solo completadas
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Average Score</p>
+              <p className="text-sm text-gray-500 mb-1">Puntuación Media</p>
               {loading ? (
                 <div className="h-9 w-20 bg-gray-100 rounded animate-pulse" />
               ) : (
@@ -237,11 +248,11 @@ export default function DashboardPage() {
                 <BookOpen className="w-5 h-5 text-indigo-600" />
               </div>
               <span className="text-xs font-medium text-gray-400">
-                By usage
+                Por uso
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Most Used Rubric</p>
+              <p className="text-sm text-gray-500 mb-1">Rúbrica Más Usada</p>
               {loading ? (
                 <div className="h-9 w-36 bg-gray-100 rounded animate-pulse" />
               ) : (
@@ -259,17 +270,17 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
             <div>
               <h2 className="text-base font-semibold text-gray-900">
-                Recent Evaluations
+                Evaluaciones Recientes
               </h2>
               <p className="text-sm text-gray-400 mt-0.5">
-                Latest project assessments
+                Últimas evaluaciones de proyectos
               </p>
             </div>
             <Link
               href="/past-evaluations"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors"
             >
-              View All <ArrowRight className="w-4 h-4" />
+              Ver Todo <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
@@ -288,12 +299,12 @@ export default function DashboardPage() {
             /* Empty state */
             <div className="px-6 py-16 text-center">
               <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">No evaluations yet.</p>
+              <p className="text-gray-500 text-sm">Sin evaluaciones todavía.</p>
               <Link
                 href="/new-evaluation"
                 className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700"
               >
-                Create your first evaluation <ArrowRight className="w-4 h-4" />
+                Crea tu primera evaluación <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           ) : (
@@ -303,22 +314,22 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Repository
+                      Repositorio
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden md:table-cell">
-                      Rubric
+                      Rúbrica
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
-                      Score
+                      Puntuación
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
-                      Date
+                      Fecha
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:table-cell">
-                      Status
+                      Estado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Actions
+                      Acciones
                     </th>
                   </tr>
                 </thead>
@@ -342,7 +353,7 @@ export default function DashboardPage() {
                             {rubricMap[ev.rubric_id] ?? `#${ev.rubric_id}`}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClass(ev.status)}`}>
-                            {ev.status}
+                            {translateStatus(ev.status)}
                           </span>
                         </div>
                       </td>
@@ -373,7 +384,7 @@ export default function DashboardPage() {
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass(ev.status)}`}
                         >
-                          {ev.status}
+                          {translateStatus(ev.status)}
                         </span>
                       </td>
 
@@ -383,7 +394,7 @@ export default function DashboardPage() {
                           href={`/past-evaluations/${ev.id}`}
                           className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
                         >
-                          View Report
+                          Ver Informe
                         </Link>
                       </td>
                     </tr>
@@ -398,17 +409,17 @@ export default function DashboardPage() {
         <div className="rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <p className="text-white font-semibold text-lg">
-              Ready to evaluate a new project?
+              ¿Listo para evaluar un nuevo proyecto?
             </p>
             <p className="text-indigo-200 text-sm mt-0.5">
-              Start a new AI-powered evaluation in just a few clicks
+              Inicia una nueva evaluación con IA en pocos clics
             </p>
           </div>
           <Link
             href="/new-evaluation"
             className="shrink-0 inline-flex items-center gap-2 bg-white text-indigo-600 font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-indigo-50 transition-colors"
           >
-            New Evaluation <ArrowRight className="w-4 h-4" />
+              Nueva Evaluación <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 

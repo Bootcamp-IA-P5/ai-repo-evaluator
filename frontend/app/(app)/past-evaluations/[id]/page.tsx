@@ -91,7 +91,7 @@ function shortRepo(url: string): string {
 
 /** Formats an ISO date string as "Mon D, YYYY HH:MM". */
 function formatDatetime(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', {
+  return new Date(iso).toLocaleString('es-ES', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -117,6 +117,17 @@ function statusPillClass(status: EvaluationDetail['status']): string {
     case 'failed':     return 'bg-red-100 text-red-700';
     default:           return 'bg-gray-100 text-gray-500';
   }
+}
+
+/** Maps status values to Spanish display labels. */
+function translateStatus(status: EvaluationDetail['status']): string {
+  const map: Record<string, string> = {
+    pending:    'Pendiente',
+    processing: 'Procesando',
+    completed:  'Completado',
+    failed:     'Fallido',
+  };
+  return map[status] ?? status;
 }
 
 /** Status icon component for the evaluation state. */
@@ -161,7 +172,7 @@ export default function EvaluationDetailPage() {
   // -- Fetch evaluation, then rubric ----------------------------------------
   useEffect(() => {
     if (!evalId || isNaN(evalId)) {
-      setError('Invalid evaluation ID.');
+      setError('ID de evaluación no válido.');
       setLoading(false);
       return;
     }
@@ -178,7 +189,7 @@ export default function EvaluationDetailPage() {
         if (!evalRes.ok) {
           throw new Error(
             evalRes.status === 404
-              ? 'Evaluation not found.'
+              ? 'Evaluación no encontrada.'
               : `Failed to load evaluation (${evalRes.status})`,
           );
         }
@@ -281,7 +292,7 @@ export default function EvaluationDetailPage() {
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to evaluations
+          Volver a las evaluaciones
         </Link>
         <div className="rounded-xl bg-red-50 border border-red-200 px-6 py-10 text-center">
           <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
@@ -290,7 +301,7 @@ export default function EvaluationDetailPage() {
             href="/past-evaluations"
             className="mt-4 inline-flex items-center gap-1.5 text-sm text-red-600 hover:underline"
           >
-            Return to Past Evaluations
+            Volver a Evaluaciones Pasadas
           </Link>
         </div>
       </div>
@@ -316,10 +327,7 @@ export default function EvaluationDetailPage() {
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to evaluations
-      </Link>
-
-      {/* ── Header card ──────────────────────────────────────────────────── */}
+        Volver a las evaluaciones
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -334,7 +342,7 @@ export default function EvaluationDetailPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-indigo-600 transition-colors shrink-0"
-                title="Open repository"
+                title="Abrir repositorio"
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
@@ -362,7 +370,7 @@ export default function EvaluationDetailPage() {
             {/* Total score badge */}
             <div
               className={`flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold shadow-sm ${scoreBadgeClass(evaluation.total_score)}`}
-              title="Total score"
+              title="Puntuación total"
             >
               {evaluation.total_score ?? '—'}
             </div>
@@ -371,7 +379,7 @@ export default function EvaluationDetailPage() {
               className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full ${statusPillClass(evaluation.status)}`}
             >
               <StatusIcon status={evaluation.status} />
-              {evaluation.status.charAt(0).toUpperCase() + evaluation.status.slice(1)}
+              {translateStatus(evaluation.status)}
             </span>
           </div>
         </div>
@@ -386,11 +394,10 @@ export default function EvaluationDetailPage() {
           <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-blue-800">
-              Evaluation in progress
+              Evaluación en progreso
             </p>
             <p className="text-sm text-blue-700 mt-0.5">
-              The AI is currently analysing the repository. Findings will appear here
-              automatically once the evaluation is complete.
+              La IA está analizando el repositorio. Los hallazgos aparecerán aquí automáticamente cuando la evaluación finalice.
             </p>
           </div>
         </div>
@@ -401,7 +408,7 @@ export default function EvaluationDetailPage() {
         <div className="rounded-xl bg-red-50 border border-red-200 px-6 py-5 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-red-800">Evaluation failed</p>
+            <p className="text-sm font-semibold text-red-800">Evaluación fallida</p>
             {evaluation.ai_summary && (
               <div className="text-sm text-red-700 mt-0.5 prose prose-sm prose-red max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation.ai_summary}</ReactMarkdown>
@@ -416,7 +423,7 @@ export default function EvaluationDetailPage() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Lightbulb className="w-4 h-4 text-yellow-500" />
-            AI Summary
+            Resumen IA
           </h2>
           <MarkdownRenderer content={evaluation.ai_summary} />
         </div>
@@ -427,7 +434,7 @@ export default function EvaluationDetailPage() {
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-gray-900">
-              Findings
+              Hallazgos
               <span className="ml-2 text-sm font-normal text-gray-400">
                 ({evaluation.findings.length})
               </span>
@@ -437,9 +444,9 @@ export default function EvaluationDetailPage() {
           {evaluation.findings.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-12 text-center">
               <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-600">No findings recorded</p>
+              <p className="text-sm font-medium text-gray-600">Sin hallazgos registrados</p>
               <p className="text-xs text-gray-400 mt-1">
-                The evaluation completed but did not produce individual findings.
+                La evaluación se completó pero no generó hallazgos individuales.
               </p>
             </div>
           ) : (
@@ -471,7 +478,7 @@ export default function EvaluationDetailPage() {
                         {/* Weight badge */}
                         {criterion && (
                           <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-0.5">
-                            weight: {criterion.weight}
+                            peso: {criterion.weight}
                           </span>
                         )}
                         {/* Score badge */}
@@ -481,7 +488,7 @@ export default function EvaluationDetailPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2.5 py-1">
-                            No level assigned
+                            Sin nivel asignado
                           </span>
                         )}
                       </div>
@@ -503,7 +510,7 @@ export default function EvaluationDetailPage() {
                       {finding.evidence_snippet && (
                         <div>
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                            Evidence
+                            Evidencia
                           </p>
                           <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 overflow-x-auto">
                             <MarkdownRenderer content={finding.evidence_snippet} />
@@ -517,7 +524,7 @@ export default function EvaluationDetailPage() {
                           <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-medium text-amber-800 mb-0.5">
-                              Improvement suggestion
+                              Sugerencia de mejora
                             </p>
                             <div className="text-sm text-amber-700 leading-relaxed prose prose-sm max-w-none [&_a]:text-amber-800 [&_code]:bg-amber-100 [&_code]:text-amber-900">
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{finding.improvement_suggestion}</ReactMarkdown>
@@ -529,7 +536,7 @@ export default function EvaluationDetailPage() {
                       {/* No content fallback */}
                       {!finding.file_path && !finding.evidence_snippet && !finding.improvement_suggestion && (
                         <p className="text-xs text-gray-400 italic">
-                          No detailed information recorded for this finding.
+                          No se registró información detallada para este hallazgo.
                         </p>
                       )}
                     </div>

@@ -158,10 +158,10 @@ export default function NewEvaluationPage() {
           briefingServerPath: response.data!.file_path 
         }));
       } else {
-        throw new Error(response.message || 'Upload failed');
+        throw new Error(response.message || 'Error al subir el archivo');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      const errorMessage = error instanceof Error ? error.message : 'Error al subir el archivo';
       setUploadError(errorMessage);
       setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
     } finally {
@@ -180,7 +180,7 @@ export default function NewEvaluationPage() {
       const briefingPath = form.briefingServerPath;
 
       if (!briefingPath) {
-        throw new Error('Please upload a briefing file before submitting');
+        throw new Error('Por favor sube el briefing antes de enviar');
       }
 
       const res = await fetch('/api/v1/evaluations/', {
@@ -202,7 +202,7 @@ export default function NewEvaluationPage() {
 
       if (!res.ok || data.success === false) {
         throw new Error(
-          data.message ?? data.errors?.[0] ?? data.detail ?? 'Evaluation failed. Please try again.'
+          data.message ?? data.errors?.[0] ?? data.detail ?? 'La evaluación falló. Por favor inténtalo de nuevo.'
         );
       }
 
@@ -230,14 +230,14 @@ export default function NewEvaluationPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <PageHeader
-        title="New Evaluation"
-        description="Configure and run an AI-powered repository evaluation"
+        title="Nueva Evaluación"
+        description="Configura y ejecuta una evaluación de repositorio con IA"
       />
 
       {submitSuccess && (
         <Alert
           variant="success"
-          message="Evaluation started successfully! Check Past Evaluations for results."
+          message="¡Evaluación iniciada correctamente! Consulta Evaluaciones Pasadas para ver los resultados."
           className="mb-6"
         />
       )}
@@ -266,15 +266,15 @@ export default function NewEvaluationPage() {
 
             {/* Evaluation Rubric */}
             <Select
-              label="Evaluation Rubric"
-              placeholder={rubricsLoading ? 'Loading rubrics...' : 'Select a rubric...'}
+              label="Rúbrica de Evaluación"
+              placeholder={rubricsLoading ? 'Cargando rúbricas...' : 'Selecciona una rúbrica...'}
               options={rubricOptions}
               value={form.rubricId}
               onChange={(val) => setForm((prev) => ({ ...prev, rubricId: val }))}
               disabled={rubricsLoading || rubricsError}
               error={
                 rubricsError
-                  ? 'Could not load rubrics. Is the backend running?'
+                  ? 'No se pudieron cargar las rúbricas. ¿Está el backend en ejecución?'
                   : undefined
               }
               fullWidth
@@ -282,7 +282,7 @@ export default function NewEvaluationPage() {
 
             {/* Project Briefing (PDF) */}
             <FileUpload
-              label="Project Briefing (PDF)"
+              label="Briefing del Proyecto (PDF)"
               accept=".pdf"
               maxSize={5}
               onFileSelect={handleFileUpload}
@@ -290,7 +290,7 @@ export default function NewEvaluationPage() {
 
             {/* GitHub Repository URL */}
             <Input
-              label="GitHub Repository URL"
+              label="URL del Repositorio de GitHub"
               type="url"
               placeholder="https://github.com/username/repository"
               value={form.repoUrl}
@@ -303,8 +303,8 @@ export default function NewEvaluationPage() {
 
             {/* AI Provider */}
             <Select
-              label="AI Provider"
-              placeholder="Select a provider..."
+              label="Proveedor de IA"
+              placeholder="Selecciona un proveedor..."
               options={AI_PROVIDERS}
               value={form.provider}
               onChange={handleProviderChange}
@@ -313,9 +313,9 @@ export default function NewEvaluationPage() {
 
             {/* Model */}
             <Select
-              label="Model"
+              label="Modelo"
               placeholder={
-                form.provider ? 'Select a model...' : 'Select a provider first'
+                form.provider ? 'Selecciona un modelo...' : 'Selecciona un proveedor primero'
               }
               options={modelOptions}
               value={form.model}
@@ -326,20 +326,20 @@ export default function NewEvaluationPage() {
 
             {/* API Key — BYOK (optional) */}
             <Input
-              label="API Key (Optional — BYOK)"
+              label="Clave API (Opcional — BYOK)"
               type={showApiKey ? 'text' : 'password'}
               placeholder="sk-..."
               value={form.apiKey}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, apiKey: e.target.value }))
               }
-              helperText="Leave empty to use the default backend key."
+              helperText="Déjalo vacío para usar la clave del servidor."
               rightIcon={
                 <button
                   type="button"
                   onClick={() => setShowApiKey((v) => !v)}
                   className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                  aria-label={showApiKey ? 'Ocultar clave API' : 'Mostrar clave API'}
                 >
                   {showApiKey ? (
                     <EyeOff className="w-4 h-4" />
@@ -360,7 +360,7 @@ export default function NewEvaluationPage() {
               disabled={!isFormValid || isSubmitting}
               isLoading={isSubmitting}
             >
-              Run Evaluation
+              Ejecutar Evaluación
             </Button>
 
           </form>

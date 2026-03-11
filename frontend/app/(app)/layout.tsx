@@ -8,22 +8,22 @@ import type { SidebarItem } from '@/components/layout';
 
 const NAV_ITEMS: SidebarItem[] = [
   {
-    label: 'Dashboard',
+    label: 'Panel',
     href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
-    label: 'New Evaluation',
+    label: 'Nueva Evaluación',
     href: '/new-evaluation',
     icon: FilePlus2,
   },
   {
-    label: 'Rubrics',
+    label: 'Rúbricas',
     href: '/rubrics',
     icon: BookOpen,
   },
   {
-    label: 'Past Evaluations',
+    label: 'Evaluaciones Pasadas',
     href: '/past-evaluations',
     icon: History,
   },
@@ -41,7 +41,7 @@ export default function AppLayout({
       onMenuClick={() => setMobileOpen(true)}
       sidebar={
         <Sidebar
-          title="AI Repository Evaluator"
+          title="EvaluAI"
           items={NAV_ITEMS}
           mobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}

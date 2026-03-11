@@ -194,7 +194,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
       <button
         type="button"
         onClick={onAddBefore}
-        title="Add level before"
+        title="Añadir nivel antes"
         className={cn(
           'self-center opacity-0 group-hover/level:opacity-100 transition-opacity',
           'w-7 h-7 rounded-full border-2 border-indigo-400 bg-white text-indigo-500',
@@ -210,7 +210,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
         {useScores && (
           <div className="mb-2">
             <label className="text-xs text-gray-400 block mb-0.5">
-              Points (required)
+              Puntos (obligatorio)
             </label>
             <input
               type="number"
@@ -232,7 +232,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           type="text"
           value={level.level_title}
           onChange={(e) => update({ level_title: e.target.value })}
-          placeholder="Level title"
+          placeholder="Título del nivel"
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
             'text-sm pb-0.5 bg-transparent mb-2 text-gray-900 placeholder:text-gray-300'
@@ -243,7 +243,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
         <textarea
           value={level.level_description}
           onChange={(e) => update({ level_description: e.target.value })}
-          placeholder="Description"
+          placeholder="Descripción"
           rows={3}
           className={cn(
             'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
@@ -256,7 +256,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
           <button
             type="button"
             onClick={onDelete}
-            title="Delete level"
+            title="Eliminar nivel"
             className={cn(
               'mt-2 text-gray-400 hover:text-red-500 transition-colors',
               'opacity-0 group-hover/level:opacity-100'
@@ -271,7 +271,7 @@ const LevelCell: React.FC<LevelCellProps> = ({
       <button
         type="button"
         onClick={onAddAfter}
-        title="Add level after"
+        title="Añadir nivel después"
         className={cn(
           'self-center opacity-0 group-hover/level:opacity-100 transition-opacity',
           'w-7 h-7 rounded-full border-2 border-indigo-400 bg-white text-indigo-500',
@@ -345,7 +345,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
             type="text"
             value={criterion.title}
             onChange={(e) => update({ title: e.target.value })}
-            placeholder="Criterion title (required)"
+            placeholder="Título del criterio (obligatorio)"
             className={cn(
               'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
               'text-base font-medium pb-1 bg-transparent text-gray-900 placeholder:text-gray-300'
@@ -355,7 +355,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
             type="text"
             value={criterion.description}
             onChange={(e) => update({ description: e.target.value })}
-            placeholder="Criterion description"
+            placeholder="Descripción del criterio"
             className={cn(
               'w-full border-b border-gray-300 focus:border-indigo-500 focus:outline-none',
               'text-sm text-gray-600 pb-1 bg-transparent placeholder:text-gray-300'
@@ -365,7 +365,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
           {/* Weight + max pts + menu: visible only on mobile (< sm), stacked below inputs */}
           <div className="flex items-center gap-3 pt-0.5 sm:hidden">
             <div className="flex flex-col gap-0.5">
-              <label className="text-xs text-gray-400">Weight</label>
+              <label className="text-xs text-gray-400">Peso</label>
               <input
                 type="number"
                 min={0.1}
@@ -401,7 +401,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
                     items: [
                       {
                         key: 'duplicate',
-                        label: 'Duplicate criterion',
+                        label: 'Duplicar criterio',
                         icon: <Copy className="w-4 h-4" />,
                         onClick: onDuplicate,
                       },
@@ -411,7 +411,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
                     items: [
                       {
                         key: 'delete',
-                        label: 'Delete criterion',
+                        label: 'Eliminar criterio',
                         icon: <Trash2 className="w-4 h-4" />,
                         destructive: true,
                         disabled: isOnly,
@@ -427,7 +427,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
 
         {/* weight field — hidden on mobile, shown on sm+ */}
         <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0">
-          <label className="text-xs text-gray-400">Weight</label>
+          <label className="text-xs text-gray-400">Peso</label>
           <input
             type="number"
             min={0.1}
@@ -467,7 +467,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
                 items: [
                   {
                     key: 'duplicate',
-                    label: 'Duplicate criterion',
+                    label: 'Duplicar criterio',
                     icon: <Copy className="w-4 h-4" />,
                     onClick: onDuplicate,
                   },
@@ -477,7 +477,7 @@ const CriterionCard: React.FC<CriterionCardProps> = ({
                 items: [
                   {
                     key: 'delete',
-                    label: 'Delete criterion',
+                    label: 'Eliminar criterio',
                     icon: <Trash2 className="w-4 h-4" />,
                     destructive: true,
                     disabled: isOnly,
@@ -571,7 +571,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
   onSave,
   onClose,
   isSaving = false,
-  headerTitle = 'Create rubric',
+  headerTitle = 'Crear rúbrica',
 }) => {
   const [rubric, setRubric] = useState<InternalRubric>(() =>
     defaultValue ? hydrateRubric(defaultValue) : emptyRubric()
@@ -605,7 +605,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
         ...source,
         _id: uid(),
         levels: source.levels.map((l) => ({ ...l, _id: uid() })),
-        title: source.title ? `${source.title} (copy)` : '',
+        title: source.title ? `${source.title} (copia)` : '',
       };
       const criteria = [...rubric.criteria];
       criteria.splice(index + 1, 0, clone);
@@ -659,7 +659,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
           disabled={!rubric.title.trim()}
           size="sm"
         >
-          Save
+          Guardar
         </Button>
       </header>
 
@@ -674,7 +674,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
                 type="text"
                 value={rubric.title}
                 onChange={(e) => update({ title: e.target.value })}
-                placeholder="Untitled rubric"
+                placeholder="Rúbrica sin título"
                 className={cn(
                   'w-full text-3xl font-bold text-gray-900 bg-transparent',
                   'border-b-2 border-transparent focus:border-indigo-400 focus:outline-none',
@@ -686,7 +686,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
                 type="text"
                 value={rubric.description}
                 onChange={(e) => update({ description: e.target.value })}
-                placeholder="Rubric description (optional)"
+                placeholder="Descripción de la rúbrica (opcional)"
                 className={cn(
                   'w-full text-sm text-gray-500 bg-transparent',
                   'border-b border-transparent focus:border-indigo-300 focus:outline-none',
@@ -734,12 +734,12 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
               ) : (
                 <ToggleLeft className="w-9 h-9 text-gray-400" />
               )}
-              Use scores
+              Usar puntuaciones
             </button>
 
             {rubric.useScores && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>Score order:</span>
+                <span>Orden de puntuación:</span>
                 <div className="relative">
                   <select
                     value={rubric.scoreOrder}
@@ -751,8 +751,8 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
                       'text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white'
                     )}
                   >
-                    <option value="descending">Descending</option>
-                    <option value="ascending">Ascending</option>
+                    <option value="descending">Descendente</option>
+                    <option value="ascending">Ascendente</option>
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -792,7 +792,7 @@ export const RubricBuilder: React.FC<RubricBuilderProps> = ({
             )}
           >
             <Plus className="w-4 h-4" />
-            Add criterion
+            Añadir criterio
           </button>
         </div>
       </main>
