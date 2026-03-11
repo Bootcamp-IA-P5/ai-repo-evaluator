@@ -43,6 +43,10 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
+// Gemini is pre-selected so users can submit without touching the AI fields.
+const DEFAULT_PROVIDER = 'gemini';
+const DEFAULT_MODEL    = 'gemini-2.0-flash';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
