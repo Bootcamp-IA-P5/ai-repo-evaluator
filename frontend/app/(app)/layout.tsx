@@ -8,7 +8,7 @@ import type { SidebarItem } from '@/components/layout';
 
 const NAV_ITEMS: SidebarItem[] = [
   {
-    label: 'Panel',
+    label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
   },

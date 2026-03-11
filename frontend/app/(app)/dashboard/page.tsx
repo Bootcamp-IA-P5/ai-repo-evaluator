@@ -179,7 +179,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col min-h-full bg-gray-50">
       <PageHeader
-        title="Panel"
+        title="Dashboard"
         description="Resumen de la actividad de evaluación y resultados recientes"
       />
 
