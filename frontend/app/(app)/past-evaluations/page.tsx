@@ -570,7 +570,7 @@ export default function PastEvaluationsPage() {
                         <span
                           className={`inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold ${scoreBadgeClass(ev.total_score)}`}
                         >
-                          {ev.total_score ?? '—'}
+                          {ev.total_score !== null ? Math.round(ev.total_score) : '—'}
                         </span>
                       </td>
 

@@ -15,9 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "EvaluAI",
   description: "AI-powered tool for evaluating student repositories using custom rubrics",
-  icons: {
-    icon: '/evaluAI.png',
-  },
 };
 
 export default function RootLayout({
