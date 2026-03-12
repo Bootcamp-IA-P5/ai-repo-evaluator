@@ -126,7 +126,9 @@ export default function NewEvaluationPage() {
 
   // When provider changes, auto-select the first model of that provider.
   const handleProviderChange = (value: string) => {
-    setForm((prev) => ({ ...prev, provider: value, model: '' }));
+    const providerModels = MODELS_BY_PROVIDER[value] ?? [];
+    const firstModelValue = providerModels[0]?.value ?? '';
+    setForm((prev) => ({ ...prev, provider: value, model: firstModelValue }));
   };
 
   // Handle file upload when a file is selected
@@ -207,7 +209,7 @@ export default function NewEvaluationPage() {
       }
 
       setSubmitSuccess(true);
-      setForm({ rubricId: '', briefingFile: null, briefingServerPath: '', repoUrl: '', provider: '', model: '', apiKey: '' });
+      setForm({ rubricId: '', briefingFile: null, briefingServerPath: '', repoUrl: '', provider: DEFAULT_PROVIDER, model: DEFAULT_MODEL, apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
