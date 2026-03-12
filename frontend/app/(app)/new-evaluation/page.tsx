@@ -239,7 +239,7 @@ export default function NewEvaluationPage() {
       {submitSuccess && (
         <Alert
           variant="success"
-          message="¡Evaluación iniciada correctamente! Consulta Evaluaciones Pasadas para ver los resultados."
+          message="¡Evaluación iniciada correctamente! Consulta el Dashboard para ver los resultados."
           className="mb-6"
         />
       )}

@@ -328,6 +328,8 @@ export default function EvaluationDetailPage() {
       >
         <ArrowLeft className="w-4 h-4" />
         Volver a las evaluaciones
+      </Link>
+
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0 flex-1">
