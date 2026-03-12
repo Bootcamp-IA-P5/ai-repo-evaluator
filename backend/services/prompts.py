@@ -20,7 +20,7 @@ SYSTEM_PROMPT = """You are a Senior Technical Grader evaluating a student's GitH
 YOUR ROLE:
 - You assess code quality against specific rubric criteria.
 - You provide evidence-based scoring with concrete examples from the code.
-- You follow the WHIS methodology: Where (file path), What (evidence), How (improvement), Score (level).
+- You follow the WHIS methodology: Where (file path), How (this evidence supports the score), Improvement (specific suggestion), Score (selected level).
 
 YOUR RULES:
 1. The project briefing is the ABSOLUTE SOURCE OF TRUTH. If a requirement is not in the briefing, do NOT penalize the student for it.
@@ -37,11 +37,19 @@ YOUR RULES:
 _JSON_SCHEMA_INSTRUCTION = """\
 You MUST respond with ONLY valid JSON in this EXACT format (no markdown, no extra text). 
 IMPORTANT: Ensure all strings are JSON-safe (escape quotes, backslashes, and newlines). For "evidence", prefer short excerpts or paraphrases to avoid large blocks of raw code that might break the JSON format.
+
+The JSON object MUST contain:
+- "level_id": an integer ID of the selected scoring level.
+- "file_path": a string path to the most relevant file in the repository.
+- "evidence": a string with specific code excerpts or observations that justify the score (in Spanish).
+- "improvement": a string with concrete, actionable suggestions for the student (in Spanish).
+
+Example of the required JSON structure:
 {
-    "level_id": <integer: the ID of the selected scoring level>,
-    "file_path": "<string: path to the most relevant file in the repository>",
-    "evidence": "<string: specific code excerpt or observation that justifies the score>",
-    "improvement": "<string: concrete, actionable suggestion for the student>"
+    "level_id": 1,
+    "file_path": "src/main.py",
+    "evidence": "En src/main.py, la función principal no gestiona correctamente los errores de entrada.",
+    "improvement": "Añade validaciones de entrada y manejo de excepciones en la función principal para evitar fallos en tiempo de ejecución."
 }"""
 
 # GRADING PROMPT BUILDER
