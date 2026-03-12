@@ -147,9 +147,10 @@ class AIEvaluationEngine:
                     'score_points': 0.0
                 })
 
-        # 5. Calculate total score
-        if total_weight > 0:
-            total_score = total_weighted_score
+        # 5. Calculate total score and normalize to 10-point scale
+        max_possible = rubric_data.get('max_possible_score', 0.0)
+        if max_possible > 0:
+            total_score = (total_weighted_score / max_possible) * 10
         else:
             total_score = 0.0
             
@@ -195,9 +196,14 @@ class AIEvaluationEngine:
             criteria = db.query(Criterion).filter(Criterion.rubric_id == rubric_id).all()
             
             criteria_data = []
+            max_possible_score = 0.0
             for criterion in criteria:
                 levels = db.query(Level).filter(Level.criterion_id == criterion.id).all()
                 
+                # Calculate max points for this criterion
+                max_level_points = max([l.score_points for l in levels]) if levels else 0.0
+                max_possible_score += max_level_points * criterion.weight
+
                 criteria_data.append({
                     'id': criterion.id,
                     'title': criterion.title,
@@ -218,7 +224,8 @@ class AIEvaluationEngine:
                 'id': rubric.id,
                 'title': rubric.title,
                 'description': rubric.description,
-                'criteria': criteria_data
+                'criteria': criteria_data,
+                'max_possible_score': max_possible_score
             }
 
         finally:
@@ -330,7 +337,7 @@ class AIEvaluationEngine:
             criterion=criterion,
             levels=criterion['levels'],
             briefing_context=context,
-            code_evidence="",
+            code_evidence=context,
         )
 
     def _parse_evaluation_response(self, response_text: str, criterion: Dict[str, Any]) -> Dict[str, Any]:
@@ -407,10 +414,10 @@ class AIEvaluationEngine:
         # Map internal finding keys to the format expected by build_summary_prompt
         findings_for_prompt = [
             {
-                'criterion_title': f.get('criterion_title', f"Criterion {f.get('criterion_id', 'Unknown')}"),
+                'criterion_title': f.get('criterion_title') or f"Criterion {f.get('criterion_id', 'Unknown')}",
                 'score_points': f.get('score_points', 0),
-                'evidence': f.get('evidence_snippet', 'N/A'),
-                'improvement': f.get('improvement_suggestion', 'N/A'),
+                'evidence': f.get('evidence_snippet') or 'N/A',
+                'improvement': f.get('improvement_suggestion') or 'N/A',
             }
             for f in findings
         ]
