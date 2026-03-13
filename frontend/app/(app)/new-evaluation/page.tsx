@@ -21,7 +21,7 @@ import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services
 
 const AI_PROVIDERS: SelectOption[] = [
   { value: 'gemini', label: 'Gemini (Google)' },
-  { value: 'groq',   label: 'Groq' },
+  { value: 'grok',   label: 'Grok (xAI)' },
   { value: 'openai', label: 'OpenAI' },
 ];
 
@@ -31,10 +31,10 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     { value: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
   ],
-  groq: [
-    { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
-    { value: 'llama3-8b-8192',          label: 'LLaMA 3 8B' },
-    { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
+  grok: [
+    { value: 'grok-beta', label: 'Grok Beta' },
+    { value: 'grok-2',    label: 'Grok 2' },
+    { value: 'grok-2-mini', label: 'Grok 2 Mini' },
   ],
   openai: [
     { value: 'gpt-4o',      label: 'GPT-4o' },
@@ -185,13 +185,23 @@ export default function NewEvaluationPage() {
         throw new Error('Por favor sube el briefing antes de enviar');
       }
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      const apiKey = form.apiKey.trim();
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+      }
+
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           rubric_id: parseInt(form.rubricId, 10),
           repo_url: form.repoUrl,
           briefing_path: briefingPath,
+          ai_provider: form.provider,
+          ai_model: form.model,
         }),
       });
 
