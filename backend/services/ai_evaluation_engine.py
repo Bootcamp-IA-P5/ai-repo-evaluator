@@ -22,6 +22,7 @@ from models import Evaluation, Rubric, Criterion, Level, Finding
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
 from services.context_engine import ContextEngine
+from services.prompts import build_grading_prompt, build_summary_prompt
 import os
 
 
@@ -146,9 +147,10 @@ class AIEvaluationEngine:
                     'score_points': 0.0
                 })
 
-        # 5. Calculate total score
-        if total_weight > 0:
-            total_score = total_weighted_score
+        # 5. Calculate total score and normalize to 100-point scale
+        max_possible = rubric_data.get('max_possible_score', 0.0)
+        if max_possible > 0:
+            total_score = (total_weighted_score / max_possible) * 100
         else:
             total_score = 0.0
             
@@ -194,9 +196,14 @@ class AIEvaluationEngine:
             criteria = db.query(Criterion).filter(Criterion.rubric_id == rubric_id).all()
             
             criteria_data = []
+            max_possible_score = 0.0
             for criterion in criteria:
                 levels = db.query(Level).filter(Level.criterion_id == criterion.id).all()
                 
+                # Calculate max points for this criterion
+                max_level_points = max([l.score_points for l in levels]) if levels else 0.0
+                max_possible_score += max_level_points * criterion.weight
+
                 criteria_data.append({
                     'id': criterion.id,
                     'title': criterion.title,
@@ -217,7 +224,8 @@ class AIEvaluationEngine:
                 'id': rubric.id,
                 'title': rubric.title,
                 'description': rubric.description,
-                'criteria': criteria_data
+                'criteria': criteria_data,
+                'max_possible_score': max_possible_score
             }
 
         finally:
@@ -241,9 +249,13 @@ class AIEvaluationEngine:
         # Prepare RAG context
         rag_context = self._prepare_rag_context(criterion, context_engine)
         
-        # Build prompt using inline method
-        context = f"BRIEFING REQUIREMENTS:\n{rag_context['briefing']}\n\nCODE EVIDENCE:\n{rag_context['code']}"
-        prompt = self._build_evaluation_prompt(criterion, context)
+        # Build prompt using centralized prompt templates (prompts.py)
+        prompt = build_grading_prompt(
+            criterion=criterion,
+            levels=criterion['levels'],
+            briefing_context=rag_context['briefing'],
+            code_evidence=rag_context['code'],
+        )
         
         try:
             # Call AI provider API
@@ -309,48 +321,24 @@ class AIEvaluationEngine:
     def _build_evaluation_prompt(self, criterion: Dict[str, Any], context: str) -> str:
         """
         Build the evaluation prompt for AI API.
-        
+
+        .. deprecated::
+            This method is kept for backward compatibility.
+            New code should call ``build_grading_prompt()`` from ``prompts.py`` directly.
+
         Args:
             criterion: The criterion being evaluated
             context: RAG context containing relevant code and requirements
-            
+
         Returns:
             String containing the evaluation prompt
         """
-        levels_text = "\n".join([
-            f"{level['id']}. {level['title']} ({level['score_points']} points): {level['description']}"
-            for level in criterion['levels']
-        ])
-        
-        return f"""
-        Evaluate the code repository against the following criterion:
-
-        CRITERION: {criterion['title']}
-        DESCRIPTION: {criterion['description']}
-        WEIGHT: {criterion['weight']}
-
-        SCORING LEVELS:
-        {levels_text}
-
-        CONTEXT:
-        {context}
-
-        INSTRUCTIONS:
-        1. Analyze the code against the criterion requirements
-        2. Select the most appropriate scoring level (1-{len(criterion['levels'])})
-        3. Provide specific evidence from the code
-        4. Suggest concrete improvements
-
-        FORMAT YOUR RESPONSE AS JSON:
-        {{
-            "level_id": <selected_level_id>,
-            "file_path": "<relevant_file_path>",
-            "evidence": "<specific_code_evidence>",
-            "improvement": "<concrete_improvement_suggestion>"
-        }}
-
-        If the code doesn't contain relevant information, select the lowest level and explain why.
-        """
+        return build_grading_prompt(
+            criterion=criterion,
+            levels=criterion['levels'],
+            briefing_context=context,
+            code_evidence=context,
+        )
 
     def _parse_evaluation_response(self, response_text: str, criterion: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -423,24 +411,23 @@ class AIEvaluationEngine:
         Returns:
             String containing the AI-generated summary
         """
-        # Build summary from findings
-        findings_text = "\n".join([
-            f"- Criterion {f.get('criterion_id', 'Unknown')}: "
-            f"{f.get('score_points', 0)} points - {f.get('evidence_snippet', 'No evidence')}"
+        # Map internal finding keys to the format expected by build_summary_prompt
+        findings_for_prompt = [
+            {
+                'criterion_title': f.get('criterion_title') or f"Criterion {f.get('criterion_id', 'Unknown')}",
+                'score_points': f.get('score_points', 0),
+                'evidence': f.get('evidence_snippet') or 'N/A',
+                'improvement': f.get('improvement_suggestion') or 'N/A',
+            }
             for f in findings
-        ])
-        
-        prompt = f"""
-        Generate a comprehensive evaluation summary for:
-        Repository: {repo_url}
-        Rubric: {rubric_title}
-        Total Score: {total_score:.2f}
+        ]
 
-        Findings:
-        {findings_text}
-
-        Provide a professional summary highlighting strengths, weaknesses, and key recommendations.
-        """
+        prompt = build_summary_prompt(
+            repo_url=repo_url,
+            rubric_title=rubric_title,
+            findings_summary=findings_for_prompt,
+            total_score=total_score,
+        )
 
         try:
             response_text = self.ai_client.chat(prompt)
