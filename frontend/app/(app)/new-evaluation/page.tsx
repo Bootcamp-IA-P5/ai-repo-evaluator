@@ -142,7 +142,7 @@ export default function NewEvaluationPage() {
     // Validate file before upload
     const validation = validateFile(file, 5, ['.pdf']);
     if (!validation.isValid) {
-      setUploadError(validation.error);
+      setUploadError(validation.error || null);
       setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
       return;
     }
