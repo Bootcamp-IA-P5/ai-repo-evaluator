@@ -147,10 +147,10 @@ class AIEvaluationEngine:
                     'score_points': 0.0
                 })
 
-        # 5. Calculate total score and normalize to 10-point scale
+        # 5. Calculate total score and normalize to 100-point scale
         max_possible = rubric_data.get('max_possible_score', 0.0)
         if max_possible > 0:
-            total_score = (total_weighted_score / max_possible) * 10
+            total_score = (total_weighted_score / max_possible) * 100
         else:
             total_score = 0.0
             
