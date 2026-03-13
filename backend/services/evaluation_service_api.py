@@ -19,7 +19,7 @@ from services.ai_evaluation_engine import AIEvaluationEngine, run_evaluation_tas
 from core.logging_config import logger
 from core.messages import Messages
 from core.database import SessionLocal
-from core.settings import settings
+from core.settings import AIProvider, settings
 
 
 class EvaluationServiceAPI:
@@ -242,7 +242,7 @@ def run_evaluation_task(
     Args:
         evaluation_id: The ID of the evaluation to process
         db_url: Database URL for creating a new session
-        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_provider: AI provider to use (openai, gemini, groq) - optional
         ai_model: Specific model for the provider - optional
         ai_api_key: API key for the provider - optional
     """
@@ -263,7 +263,9 @@ def run_evaluation_task(
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
         # 2. Initialize AI evaluation engine
-        ai_engine = AIEvaluationEngine()
+        if not ai_provider:
+            ai_provider = AIProvider.GEMINI
+        ai_engine = AIEvaluationEngine(provider = ai_provider, model = ai_model, api_key = ai_api_key)
 
         # 3. Parse briefing chunks from snapshot
         try:

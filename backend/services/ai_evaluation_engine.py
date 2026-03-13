@@ -455,7 +455,7 @@ def run_evaluation_task(
     Args:
         evaluation_id: The ID of the evaluation to process
         db_url: Database URL for creating a new session
-        ai_provider: AI provider to use (openai, gemini, grok) - optional
+        ai_provider: AI provider to use (openai, gemini, groq) - optional
         ai_model: Specific model for the provider - optional
         ai_api_key: API key for the provider - optional
     """
