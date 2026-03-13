@@ -72,12 +72,12 @@ class EvaluationRequest(BaseModel):
                 {
                     "repo_url": "https://github.com/student/backend-project",
                     "rubric_id": 1,
-                    "briefing_path": "/data/briefings/project-briefing.pdf",
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                 },
                 {
                     "repo_url": "https://github.com/student/backend-project",
                     "rubric_id": 1,
-                    "briefing_path": "/data/briefings/project-briefing.pdf",
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                     "ai_provider": "openai",
                     "ai_model": "gpt-4",
                     "ai_api_key": "sk-example-api-key"
@@ -85,7 +85,7 @@ class EvaluationRequest(BaseModel):
                 {
                     "repo_url": "https://github.com/student/backend-project",
                     "rubric_id": 1,
-                    "briefing_path": "/data/briefings/project-briefing.pdf",
+                    "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
                     "ai_provider": "gemini",
                     "ai_model": "gemini-1.5-pro",
                     "ai_api_key": "AIza-example-api-key"

@@ -13,38 +13,39 @@ import {
 } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import type { SelectOption } from '@/components/ui';
+import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services/file-upload';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const AI_PROVIDERS: SelectOption[] = [
-  { value: 'groq', label: 'Groq' },
+  { value: 'gemini', label: 'Gemini (Google)' },
+  { value: 'groq',   label: 'Groq' },
   { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
 ];
 
 const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
+  gemini: [
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
+  ],
   groq: [
     { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
-    { value: 'llama3-8b-8192', label: 'LLaMA 3 8B' },
-    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+    { value: 'llama3-8b-8192',          label: 'LLaMA 3 8B' },
+    { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
   ],
   openai: [
-    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o',      label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
   ],
-  anthropic: [
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-  ],
 };
 
-// Server-side directory where briefing PDFs are stored.
-// Must match the path configured in the backend (see POST /api/v1/evaluations/ docs).
-const BRIEFINGS_SERVER_DIR = '/data/briefings';
+// Gemini is pre-selected so users can submit without touching the AI fields.
+const DEFAULT_PROVIDER = 'gemini';
+const DEFAULT_MODEL    = 'gemini-2.0-flash';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +59,7 @@ interface RubricOption {
 interface FormState {
   rubricId: string;
   briefingFile: File | null;
+  briefingServerPath: string;
   repoUrl: string;
   provider: string;
   model: string;
@@ -74,13 +76,14 @@ export default function NewEvaluationPage() {
   const [rubricsLoading, setRubricsLoading] = useState(true);
   const [rubricsError, setRubricsError] = useState(false);
 
-  // Form
+  // Form — Gemini is pre-selected so the user can submit without touching the AI fields.
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
+    briefingServerPath: '',
     repoUrl: '',
-    provider: '',
-    model: '',
+    provider: DEFAULT_PROVIDER,
+    model: DEFAULT_MODEL,
     apiKey: '',
   });
 
@@ -89,6 +92,10 @@ export default function NewEvaluationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Load rubrics on mount
   useEffect(() => {
@@ -117,9 +124,51 @@ export default function NewEvaluationPage() {
     ? (MODELS_BY_PROVIDER[form.provider] ?? [])
     : [];
 
-  // Reset model when provider changes
+  // When provider changes, auto-select the first model of that provider.
   const handleProviderChange = (value: string) => {
-    setForm((prev) => ({ ...prev, provider: value, model: '' }));
+    const providerModels = MODELS_BY_PROVIDER[value] ?? [];
+    const firstModelValue = providerModels[0]?.value ?? '';
+    setForm((prev) => ({ ...prev, provider: value, model: firstModelValue }));
+  };
+
+  // Handle file upload when a file is selected
+  const handleFileUpload = async (file: File | null) => {
+    if (!file) {
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      setUploadError(null);
+      return;
+    }
+
+    // Validate file before upload
+    const validation = validateFile(file, 5, ['.pdf']);
+    if (!validation.isValid) {
+      setUploadError(validation.error);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const response = await uploadBriefingFile(file);
+      
+      if (response.success && response.data) {
+        setForm((prev) => ({ 
+          ...prev, 
+          briefingFile: file, 
+          briefingServerPath: response.data!.file_path 
+        }));
+      } else {
+        throw new Error(response.message || 'Error al subir el archivo');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al subir el archivo';
+      setUploadError(errorMessage);
+      setForm((prev) => ({ ...prev, briefingFile: null, briefingServerPath: '' }));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,10 +178,12 @@ export default function NewEvaluationPage() {
     setIsSubmitting(true);
 
     try {
-      // The backend expects JSON with { rubric_id, repo_url, briefing_path }.
-      // briefing_path must be a server-side absolute path; we derive it from
-      // the selected file's name using the configured server directory.
-      const briefingPath = `${BRIEFINGS_SERVER_DIR}/${form.briefingFile!.name}`;
+      // Use the uploaded file path instead of constructing it
+      const briefingPath = form.briefingServerPath;
+
+      if (!briefingPath) {
+        throw new Error('Por favor sube el briefing antes de enviar');
+      }
 
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
@@ -153,12 +204,12 @@ export default function NewEvaluationPage() {
 
       if (!res.ok || data.success === false) {
         throw new Error(
-          data.message ?? data.errors?.[0] ?? data.detail ?? 'Evaluation failed. Please try again.'
+          data.message ?? data.errors?.[0] ?? data.detail ?? 'La evaluación falló. Por favor inténtalo de nuevo.'
         );
       }
 
       setSubmitSuccess(true);
-      setForm({ rubricId: '', briefingFile: null, repoUrl: '', provider: '', model: '', apiKey: '' });
+      setForm({ rubricId: '', briefingFile: null, briefingServerPath: '', repoUrl: '', provider: DEFAULT_PROVIDER, model: DEFAULT_MODEL, apiKey: '' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Unexpected error');
     } finally {
@@ -171,24 +222,24 @@ export default function NewEvaluationPage() {
     label: r.title,
   }));
 
+  // Provider and model are optional — the backend uses Gemini by default when omitted.
+  // briefingServerPath is set only after a successful upload, so it is the right guard.
   const isFormValid =
     form.rubricId !== '' &&
-    form.briefingFile !== null &&
-    form.repoUrl.trim() !== '' &&
-    form.provider !== '' &&
-    form.model !== '';
+    form.briefingServerPath !== '' &&
+    form.repoUrl.trim() !== '';
 
   return (
     <div className="max-w-3xl mx-auto">
       <PageHeader
-        title="New Evaluation"
-        description="Configure and run an AI-powered repository evaluation"
+        title="Nueva Evaluación"
+        description="Configura y ejecuta una evaluación de repositorio con IA"
       />
 
       {submitSuccess && (
         <Alert
           variant="success"
-          message="Evaluation started successfully! Check Past Evaluations for results."
+          message="¡Evaluación iniciada correctamente! Consulta el Dashboard para ver los resultados."
           className="mb-6"
         />
       )}
@@ -202,21 +253,30 @@ export default function NewEvaluationPage() {
         />
       )}
 
+      {uploadError && (
+        <Alert
+          variant="error"
+          message={uploadError}
+          className="mb-6"
+          onDismiss={() => setUploadError(null)}
+        />
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Evaluation Rubric */}
             <Select
-              label="Evaluation Rubric"
-              placeholder={rubricsLoading ? 'Loading rubrics...' : 'Select a rubric...'}
+              label="Rúbrica de Evaluación"
+              placeholder={rubricsLoading ? 'Cargando rúbricas...' : 'Selecciona una rúbrica...'}
               options={rubricOptions}
               value={form.rubricId}
               onChange={(val) => setForm((prev) => ({ ...prev, rubricId: val }))}
               disabled={rubricsLoading || rubricsError}
               error={
                 rubricsError
-                  ? 'Could not load rubrics. Is the backend running?'
+                  ? 'No se pudieron cargar las rúbricas. ¿Está el backend en ejecución?'
                   : undefined
               }
               fullWidth
@@ -224,17 +284,15 @@ export default function NewEvaluationPage() {
 
             {/* Project Briefing (PDF) */}
             <FileUpload
-              label="Project Briefing (PDF)"
+              label="Briefing del Proyecto (PDF)"
               accept=".pdf"
-              maxSize={10}
-              onFileSelect={(file) =>
-                setForm((prev) => ({ ...prev, briefingFile: file }))
-              }
+              maxSize={5}
+              onFileSelect={handleFileUpload}
             />
 
             {/* GitHub Repository URL */}
             <Input
-              label="GitHub Repository URL"
+              label="URL del Repositorio de GitHub"
               type="url"
               placeholder="https://github.com/username/repository"
               value={form.repoUrl}
@@ -247,8 +305,8 @@ export default function NewEvaluationPage() {
 
             {/* AI Provider */}
             <Select
-              label="AI Provider"
-              placeholder="Select a provider..."
+              label="Proveedor de IA"
+              placeholder="Selecciona un proveedor..."
               options={AI_PROVIDERS}
               value={form.provider}
               onChange={handleProviderChange}
@@ -257,9 +315,9 @@ export default function NewEvaluationPage() {
 
             {/* Model */}
             <Select
-              label="Model"
+              label="Modelo"
               placeholder={
-                form.provider ? 'Select a model...' : 'Select a provider first'
+                form.provider ? 'Selecciona un modelo...' : 'Selecciona un proveedor primero'
               }
               options={modelOptions}
               value={form.model}
@@ -270,20 +328,20 @@ export default function NewEvaluationPage() {
 
             {/* API Key — BYOK (optional) */}
             <Input
-              label="API Key (Optional — BYOK)"
+              label="Clave API (Opcional — BYOK)"
               type={showApiKey ? 'text' : 'password'}
               placeholder="sk-..."
               value={form.apiKey}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, apiKey: e.target.value }))
               }
-              helperText="Leave empty to use the default backend key."
+              helperText="Déjalo vacío para usar la clave del servidor."
               rightIcon={
                 <button
                   type="button"
                   onClick={() => setShowApiKey((v) => !v)}
                   className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
+                  aria-label={showApiKey ? 'Ocultar clave API' : 'Mostrar clave API'}
                 >
                   {showApiKey ? (
                     <EyeOff className="w-4 h-4" />
@@ -304,7 +362,7 @@ export default function NewEvaluationPage() {
               disabled={!isFormValid || isSubmitting}
               isLoading={isSubmitting}
             >
-              Run Evaluation
+              Ejecutar Evaluación
             </Button>
 
           </form>

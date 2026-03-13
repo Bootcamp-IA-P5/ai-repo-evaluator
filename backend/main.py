@@ -9,6 +9,7 @@ from core.settings import settings
 from core.exception_handlers import register_exception_handlers
 from routers.rubrics import router as rubrics_router
 from routers.evaluations import router as evaluations_router
+from routers.file_upload import router as file_upload_router
 
 # 1. Setup Logging (with colorlog!)
 setup_logging()
@@ -37,6 +38,7 @@ register_exception_handlers(app)
 # 5. Register API Routers
 app.include_router(rubrics_router, prefix=settings.API_V1_PREFIX)
 app.include_router(evaluations_router, prefix=settings.API_V1_PREFIX)
+app.include_router(file_upload_router)
 
 # 6. Basic Health Check Endpoint
 from fastapi import HTTPException

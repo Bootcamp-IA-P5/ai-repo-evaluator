@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     HEALTH_CHECK_PATH: str = "/health"
     ROOT_PATH: str = "/"
 
+    # Route Configuration - Briefings
+    BRIEFING_UPLOAD_ENDPOINT: str = "/briefings"
+
     # Evaluation Status Constants
     EVALUATION_STATUS_PENDING: str = "pending"
     EVALUATION_STATUS_PROCESSING: str = "processing"
@@ -75,6 +78,9 @@ class Settings(BaseSettings):
     # RAG Context Limits
     RAG_MAX_CHUNKS: int = 8
     RAG_MAX_CHUNK_CHARS: int = 1200
+    
+    # File upload path
+    FILE_UPLOAD_PATH: str = "/tmp/briefings"
 
     model_config = SettingsConfigDict(
         env_file=".env",

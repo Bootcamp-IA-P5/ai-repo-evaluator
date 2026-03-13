@@ -59,7 +59,7 @@ interface ApiResponse<T> {
 // ---------------------------------------------------------------------------
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  return new Date(dateStr).toLocaleDateString('es-ES', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -183,14 +183,23 @@ export default function RubricsPage() {
 
   const handleEditClick = async (rubric: RubricSummary) => {
     setActionError(null);
+    setIsSaving(false);
     setEditFetching(true);
-    const detail = await fetchRubricDetail(rubric.id);
-    setEditFetching(false);
-    if (!detail) {
+    // Fetch fresh data directly — do not go through the cache, which may be stale
+    // from a previous expand or save. The cache is updated after a successful fetch.
+    try {
+      const res = await fetch(`${apiUrl}/api/v1/rubrics/${rubric.id}`);
+      if (!res.ok) throw new Error('Failed to load rubric details');
+      const json: ApiResponse<RubricDetail> = await res.json();
+      if (!json.success) throw new Error(json.message || 'Failed to load rubric details');
+      // Update cache with the fresh data so the expanded card is also up to date
+      setCriteriaCache((prev) => ({ ...prev, [rubric.id]: json.data }));
+      setEditRubric(json.data);
+    } catch {
       setActionError('Could not load rubric details for editing.');
-      return;
+    } finally {
+      setEditFetching(false);
     }
-    setEditRubric(detail);
   };
 
   const handleCreate = async (data: RubricData) => {
@@ -219,7 +228,7 @@ export default function RubricsPage() {
     setIsSaving(true);
     setActionError(null);
     try {
-      // Step 1: Update rubric metadata only (PUT only accepts title + description)
+      // Step 1: Update rubric metadata only (PUT /rubrics/{id}/ accepts title + description)
       const metaRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -240,37 +249,120 @@ export default function RubricsPage() {
             method: 'DELETE',
           });
           if (!delRes.ok) throw new Error(`Failed to delete criterion (${delRes.status})`);
+          // The backend returns HTTP 200 + success:false when the criterion is not found.
+          // Check the application-level flag so we don't silently ignore failures.
+          const delJson: ApiResponse<null> = await delRes.json();
+          if (!delJson.success) throw new Error(delJson.message || 'Failed to delete criterion');
         }
       }
 
       // 2b. Update existing criteria / create new ones
       for (const criterion of data.criteria) {
-        const payload = {
-          title: criterion.title,
-          description: criterion.description,
-          weight: criterion.weight,
-          levels: criterion.levels,
-        };
-
         if (criterion.id && existingIds.has(criterion.id)) {
-          // Update existing criterion (PUT accepts title, description, weight, levels)
-          const putRes = await fetch(
-            `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
+          const origCriterion = editRubric.criteria.find((c) => c.id === criterion.id);
+
+          // Update criterion metadata only when something actually changed.
+          // The backend PUT always calls criterion.levels.clear() when levels are
+          // present in the schema, which triggers a FK violation for levels referenced
+          // by findings. We send only title/description/weight (no levels), but even
+          // so the backend may fail. Treat this as non-blocking: a FK violation means
+          // the metadata could not be updated this time, but level management can still
+          // proceed with the individual /levels/* endpoints below.
+          const metaChanged =
+            origCriterion?.title !== criterion.title ||
+            origCriterion?.description !== criterion.description ||
+            origCriterion?.weight !== criterion.weight;
+
+          if (metaChanged) {
+            const putRes = await fetch(
+              `${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/${criterion.id}/`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: criterion.title,
+                  description: criterion.description,
+                  weight: criterion.weight,
+                }),
+              }
+            );
+            if (!putRes.ok) {
+              // Non-2xx: log the error but keep going so levels are still managed.
+              console.error(`[handleEdit] criterion ${criterion.id} metadata PUT failed (${putRes.status})`);
+            } else {
+              const putJson: ApiResponse<unknown> = await putRes.json();
+              if (!putJson.success) {
+                // HTTP 200 but success:false — typically a FK violation from the backend
+                // attempting levels.clear(). Log and continue; level management below
+                // will still run and apply the user's changes.
+                console.error(`[handleEdit] criterion ${criterion.id} metadata PUT: ${putJson.message}`);
+              }
             }
-          );
-          if (!putRes.ok) throw new Error(`Failed to update criterion (${putRes.status})`);
+          }
+
+          // Diff levels against the original criterion snapshot.
+          const incomingLevelIds = new Set(criterion.levels.map((l) => l.id).filter(Boolean));
+
+          for (const level of criterion.levels) {
+            if (level.id) {
+              // Update existing level — best-effort, non-critical.
+              await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${level.id}/`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    level_title:       level.level_title,
+                    level_description: level.level_description,
+                    score_points:      level.score_points,
+                  }),
+                }
+              ).catch(() => { /* non-critical */ });
+            } else {
+              // New level (no id) — create it via POST.
+              const createRes = await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    level_title:       level.level_title,
+                    level_description: level.level_description,
+                    score_points:      level.score_points,
+                  }),
+                }
+              );
+              if (!createRes.ok) throw new Error(`Failed to create level (${createRes.status})`);
+              const createJson: ApiResponse<unknown> = await createRes.json();
+              if (!createJson.success) throw new Error(createJson.message || 'Failed to create level');
+            }
+          }
+
+          // Delete levels removed in the editor.
+          // Best-effort: a level referenced by a finding will fail the FK check — skip silently.
+          for (const origLevel of (origCriterion?.levels ?? [])) {
+            if (origLevel.id && !incomingLevelIds.has(origLevel.id)) {
+              await fetch(
+                `${apiUrl}/api/v1/rubrics/criteria/${criterion.id}/levels/${origLevel.id}/`,
+                { method: 'DELETE' }
+              ).catch(() => { /* level referenced by a finding — skip */ });
+            }
+          }
         } else {
-          // Create new criterion
+          // New criterion (no id) — create it together with its levels.
           const postRes = await fetch(`${apiUrl}/api/v1/rubrics/${editRubric.id}/criteria/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              title:       criterion.title,
+              description: criterion.description,
+              weight:      criterion.weight,
+              levels:      criterion.levels,
+            }),
           });
           if (!postRes.ok) throw new Error(`Failed to create criterion (${postRes.status})`);
+          const postJson: ApiResponse<unknown> = await postRes.json();
+          if (!postJson.success) throw new Error(postJson.message || 'Failed to create criterion');
         }
       }
 
@@ -283,6 +375,7 @@ export default function RubricsPage() {
       setEditRubric(null);
       await fetchRubrics();
     } catch (err) {
+      console.error('[handleEdit]', err);
       setActionError(err instanceof Error ? err.message : 'Failed to update rubric');
     } finally {
       setIsSaving(false);
@@ -390,6 +483,11 @@ export default function RubricsPage() {
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error(`Failed to delete level (${res.status})`);
+      // The backend returns HTTP 200 + success:false when the level is not found.
+      // Without this check, the cache would be updated locally even though the
+      // backend did not delete anything — causing the level to reappear on page refresh.
+      const json = await res.json().catch(() => ({ success: true })) as ApiResponse<null>;
+      if (!json.success) throw new Error(json.message || 'Failed to delete level');
       // Optimistically remove the level from the local cache — no extra GET needed.
       setCriteriaCache((prev) => {
         const rubric = prev[rubricId];
@@ -466,8 +564,8 @@ export default function RubricsPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <PageHeader
-        title="Evaluation Rubrics"
-        description="Manage evaluation criteria and scoring templates"
+        title="Rúbricas de Evaluación"
+        description="Gestiona criterios de evaluación y plantillas de puntuación"
         action={
           <Button
             leftIcon={<Plus className="w-4 h-4" />}
@@ -476,7 +574,7 @@ export default function RubricsPage() {
               setCreateOpen(true);
             }}
           >
-            Create Rubric
+            Crear Rúbrica
           </Button>
         }
       />
@@ -496,7 +594,7 @@ export default function RubricsPage() {
         <div className="flex items-center justify-center py-24 text-gray-500">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm">Loading rubrics...</p>
+            <p className="text-sm">Cargando rúbricas...</p>
           </div>
         </div>
       ) : fetchError ? (
@@ -506,9 +604,9 @@ export default function RubricsPage() {
         /* Empty state */
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <BookOpen className="w-14 h-14 mb-4 text-gray-200" />
-          <p className="text-lg font-semibold text-gray-700">No rubrics yet</p>
+          <p className="text-lg font-semibold text-gray-700">Sin rúbricas todavía</p>
           <p className="mt-1 text-sm text-gray-500">
-            Create your first rubric to start evaluating repositories.
+            Crea tu primera rúbrica para empezar a evaluar repositorios.
           </p>
           <Button
             className="mt-6"
@@ -518,7 +616,7 @@ export default function RubricsPage() {
               setCreateOpen(true);
             }}
           >
-            Create Rubric
+            Crear Rúbrica
           </Button>
         </div>
       ) : (
@@ -544,8 +642,8 @@ export default function RubricsPage() {
                         onClick={() => handleEditClick(rubric)}
                         disabled={editFetching}
                         className="p-1.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
-                        title="Edit rubric"
-                        aria-label="Edit rubric"
+                        title="Editar rúbrica"
+                        aria-label="Editar rúbrica"
                       >
                         {editFetching ? (
                           <div className="w-4 h-4 border border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -560,8 +658,8 @@ export default function RubricsPage() {
                           setDeleteRubric(rubric);
                         }}
                         className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete rubric"
-                        aria-label="Delete rubric"
+                        title="Eliminar rúbrica"
+                        aria-label="Eliminar rúbrica"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -580,14 +678,14 @@ export default function RubricsPage() {
                   <div className="mt-4 space-y-1.5 text-sm border-t border-gray-100 pt-3">
                     {detail && (
                       <div className="flex justify-between text-gray-600">
-                        <span>Criteria</span>
+                        <span>Criterios</span>
                         <span className="font-medium text-gray-900">{detail.criteria.length}</span>
                       </div>
                     )}
                     <div className="flex items-center justify-between text-gray-600">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 shrink-0" />
-                        Created
+                        Creado
                       </span>
                       <span className="font-medium text-gray-900">
                         {formatDate(rubric.created_at)}
@@ -600,7 +698,7 @@ export default function RubricsPage() {
                 {isExpanded && detail && (
                   <div className="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-5">
                     {detail.criteria.length === 0 ? (
-                      <p className="text-sm text-gray-400 italic">No criteria defined.</p>
+                      <p className="text-sm text-gray-400 italic">Sin criterios definidos.</p>
                     ) : (
                       detail.criteria.map((criterion) => (
                         <div key={criterion.id ?? criterion.title} className="text-sm">
@@ -610,7 +708,7 @@ export default function RubricsPage() {
                               {criterion.title}
                             </span>
                             <span className="text-xs text-indigo-600 shrink-0">
-                              weight: {criterion.weight}
+                              peso: {criterion.weight}
                             </span>
                           </div>
                           {criterion.description && (
@@ -636,7 +734,7 @@ export default function RubricsPage() {
                                       <input
                                         autoFocus
                                         className="flex-1 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
-                                        placeholder="Level title"
+                                        placeholder="Título del nivel"
                                         value={editingLevel.data.level_title}
                                         onChange={(e) =>
                                           setEditingLevel({
@@ -664,7 +762,7 @@ export default function RubricsPage() {
                                       <button
                                         onClick={handleUpdateLevel}
                                         disabled={levelLoading}
-                                        title="Save changes"
+                                        title="Guardar cambios"
                                         className="p-1 rounded text-green-600 hover:bg-green-100 disabled:opacity-50 shrink-0"
                                       >
                                         {levelLoading ? (
@@ -676,7 +774,7 @@ export default function RubricsPage() {
                                       <button
                                         onClick={() => setEditingLevel(null)}
                                         disabled={levelLoading}
-                                        title="Cancel"
+                                        title="Cancelar"
                                         className="p-1 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 shrink-0"
                                       >
                                         <X className="w-3.5 h-3.5" />
@@ -685,7 +783,7 @@ export default function RubricsPage() {
                                     <textarea
                                       rows={2}
                                       className="w-full text-xs text-gray-900 border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
-                                      placeholder="Level description (optional)"
+                                      placeholder="Descripción del nivel (opcional)"
                                       value={editingLevel.data.level_description}
                                       onChange={(e) =>
                                         setEditingLevel({
@@ -712,7 +810,7 @@ export default function RubricsPage() {
                                     title={level.level_description || level.level_title}
                                   >
                                     {level.level_title || (
-                                      <span className="italic text-gray-400">(untitled)</span>
+                                      <span className="italic text-gray-400">(sin título)</span>
                                     )}
                                   </span>
                                   <span className="text-xs font-medium text-indigo-600 shrink-0">
@@ -745,8 +843,8 @@ export default function RubricsPage() {
                                     disabled={levelLoading || criterion.levels.length <= 1}
                                     title={
                                       criterion.levels.length <= 1
-                                        ? 'Cannot delete the only level'
-                                        : 'Delete level'
+                                        ? 'No se puede eliminar el único nivel'
+                                        : 'Eliminar nivel'
                                     }
                                     className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-100 sm:opacity-0 sm:group-hover/lvlrow:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                                   >
@@ -763,7 +861,7 @@ export default function RubricsPage() {
                                   <input
                                     autoFocus
                                     className="flex-1 text-xs text-gray-900 border-b border-indigo-400 bg-transparent focus:outline-none placeholder:text-gray-400"
-                                    placeholder="Level title (required)"
+                                    placeholder="Título del nivel (obligatorio)"
                                     value={addingLevel.data.level_title}
                                     onChange={(e) =>
                                       setAddingLevel({
@@ -791,7 +889,7 @@ export default function RubricsPage() {
                                   <button
                                     onClick={handleAddLevel}
                                     disabled={levelLoading || !addingLevel.data.level_title.trim()}
-                                    title="Confirm add level"
+                                    title="Confirmar nivel"
                                     className="p-1 rounded text-green-600 hover:bg-green-100 disabled:opacity-50 shrink-0"
                                   >
                                     {levelLoading ? (
@@ -803,7 +901,7 @@ export default function RubricsPage() {
                                   <button
                                     onClick={() => setAddingLevel(null)}
                                     disabled={levelLoading}
-                                    title="Cancel"
+                                    title="Cancelar"
                                     className="p-1 rounded text-gray-500 hover:bg-gray-200 disabled:opacity-50 shrink-0"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -812,7 +910,7 @@ export default function RubricsPage() {
                                 <textarea
                                   rows={2}
                                   className="w-full text-xs text-gray-900 border-b border-indigo-300 bg-transparent focus:outline-none resize-none placeholder:text-gray-400"
-                                  placeholder="Level description (optional)"
+                                  placeholder="Descripción del nivel (opcional)"
                                   value={addingLevel.data.level_description}
                                   onChange={(e) =>
                                     setAddingLevel({
@@ -837,7 +935,7 @@ export default function RubricsPage() {
                                 className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 mt-1 px-1 py-0.5 rounded hover:bg-indigo-50 transition-colors"
                               >
                                 <Plus className="w-3 h-3" />
-                                Add level
+                                Añadir nivel
                               </button>
                             )}
                           </div>
@@ -855,10 +953,10 @@ export default function RubricsPage() {
                   {isLoadingCriteria ? (
                     <span className="flex items-center gap-2">
                       <div className="w-3.5 h-3.5 border border-indigo-600 border-t-transparent rounded-full animate-spin" />
-                      Loading...
+                      Cargando...
                     </span>
                   ) : (
-                    <span>View Criteria</span>
+                    <span>Ver criterios</span>
                   )}
                   {isExpanded ? (
                     <ChevronUp className="w-4 h-4" />
@@ -883,7 +981,7 @@ export default function RubricsPage() {
               onSave={handleCreate}
               onClose={() => setCreateOpen(false)}
               isSaving={isSaving}
-              headerTitle="New Rubric"
+              headerTitle="Nueva Rúbrica"
             />
           </div>
         </div>
@@ -903,9 +1001,13 @@ export default function RubricsPage() {
                 criteria: editRubric.criteria,
               }}
               onSave={handleEdit}
-              onClose={() => setEditRubric(null)}
+              onClose={() => {
+                console.log('[Edit Modal] Closing edit modal, resetting isSaving');
+                setIsSaving(false);
+                setEditRubric(null);
+              }}
               isSaving={isSaving}
-              headerTitle="Edit Rubric"
+              headerTitle="Editar Rúbrica"
             />
           </div>
         </div>
@@ -916,10 +1018,10 @@ export default function RubricsPage() {
         isOpen={deleteRubric !== null}
         onClose={() => setDeleteRubric(null)}
         onConfirm={handleDelete}
-        title="Delete Rubric"
-        message={`Are you sure you want to delete "${deleteRubric?.title}"? This will permanently remove the rubric and all its criteria.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title="Eliminar Rúbrica"
+        message={`¿Estás seguro de que quieres eliminar "${deleteRubric?.title}"? Esto eliminará permanentemente la rúbrica y todos sus criterios.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
         confirmVariant="danger"
         isLoading={isDeleting}
       />

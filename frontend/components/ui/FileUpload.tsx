@@ -50,7 +50,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       if (accept && !accept.split(',').some(
         (type) => file.name.toLowerCase().endsWith(type.trim().toLowerCase())
       )) {
-        setValidationError(`Please upload a ${accept} file`);
+        setValidationError(`Por favor sube un archivo ${accept}`);
         setSelectedFile(null);
         onFileSelect?.(null);
         return;
@@ -59,7 +59,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       // Validate file size
       const maxSizeBytes = maxSize * 1024 * 1024;
       if (file.size > maxSizeBytes) {
-        setValidationError(`File size must be less than ${maxSize}MB`);
+        setValidationError(`El archivo no puede superar ${maxSize}MB`);
         setSelectedFile(null);
         onFileSelect?.(null);
         return;
@@ -180,7 +180,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               type="button"
               onClick={handleRemove}
               className="shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Remove file"
+              aria-label="Eliminar archivo"
             >
               <X className="w-5 h-5" />
             </button>
@@ -191,13 +191,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               <Upload className="w-6 h-6 text-gray-500" />
             </div>
             <div className="mb-1 text-sm font-medium text-gray-700">
-              Drop your PDF here, or{' '}
+              Suelta tu PDF aquí, o{' '}
               <span className="text-indigo-600 hover:text-indigo-700">
-                click to browse
+                haz clic para buscar
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              Maximum file size: {maxSize}MB
+              Tamaño máximo: {maxSize}MB
             </p>
           </div>
         )}
