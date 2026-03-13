@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { LucideIcon, X } from 'lucide-react';
@@ -65,7 +66,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">{title}</h1>
+            <Link href="/dashboard" onClick={onMobileClose} className="inline-flex items-center">
+              <Image
+                src="/evaluAI.webp"
+                alt={title}
+                width={140}
+                height={44}
+                priority
+                className="h-9 w-auto object-contain"
+              />
+            </Link>
             {subtitle && (
               <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
             )}
