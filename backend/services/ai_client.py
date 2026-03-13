@@ -7,6 +7,8 @@ from groq import Groq
 from core.settings import settings, get_api_key
 from core.logging_config import logger
 from core.messages import Messages
+from langsmith import traceable
+from langsmith.run_helpers import get_current_run_tree
 
 class AIProvider(str, Enum):
     """Enumeration of supported AI providers.
@@ -116,7 +118,8 @@ class AIClient:
 
         raise ValueError(Messages.AIProvider.UNSUPPORTED.format(provider=self.provider))
 
-    def chat(self, prompt: str) -> str:
+    @traceable
+    def chat(self, prompt: str, **kwargs    ) -> str:
         """Send a chat request to the AI provider and return the response.
         
         This method sends the provided prompt to the configured AI provider
@@ -142,6 +145,10 @@ class AIClient:
             to ensure focused, concise responses suitable for code review tasks.
         """
         logger.debug(f"Provider is {self.provider}, model is {self.model}")
+        run = get_current_run_tree()
+        if run:
+            run.name = f"{self.provider} - {self.model}"
+
         if self.provider == AIProvider.OPENAI:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -174,3 +181,4 @@ class AIClient:
             return response.choices[0].message.content
 
         return "No response from AI"
+
