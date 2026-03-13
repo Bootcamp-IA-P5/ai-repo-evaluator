@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import {
   ArrowLeft,
   FileText,
@@ -412,9 +410,10 @@ export default function EvaluationDetailPage() {
           <div>
             <p className="text-sm font-semibold text-red-800">Evaluación fallida</p>
             {evaluation.ai_summary && (
-              <div className="text-sm text-red-700 mt-0.5 prose prose-sm prose-red max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{evaluation.ai_summary}</ReactMarkdown>
-              </div>
+              <MarkdownRenderer
+                content={evaluation.ai_summary}
+                className="mt-1 [&_p]:text-red-700 [&_li]:text-red-700 [&_blockquote]:text-red-700 [&_a]:text-red-800"
+              />
             )}
           </div>
         </div>
@@ -528,9 +527,10 @@ export default function EvaluationDetailPage() {
                             <p className="text-xs font-medium text-amber-800 mb-0.5">
                               Sugerencia de mejora
                             </p>
-                            <div className="text-sm text-amber-700 leading-relaxed prose prose-sm max-w-none [&_a]:text-amber-800 [&_code]:bg-amber-100 [&_code]:text-amber-900">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{finding.improvement_suggestion}</ReactMarkdown>
-                            </div>
+                            <MarkdownRenderer
+                              content={finding.improvement_suggestion}
+                              className="[&_p]:text-amber-700 [&_li]:text-amber-700 [&_blockquote]:text-amber-700 [&_a]:text-amber-800"
+                            />
                           </div>
                         </div>
                       )}

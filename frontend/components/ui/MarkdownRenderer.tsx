@@ -31,17 +31,17 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         code: ({ children, className }) => {
           const isInline = !className;
           return isInline ? (
-            <code className="bg-gray-100 text-sm px-1.5 py-0.5 rounded border border-gray-200">
+            <code className="bg-gray-100 text-gray-900 text-sm font-mono px-1.5 py-0.5 rounded border border-gray-300">
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">
-              <code className="text-sm">{children}</code>
+            <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto">
+              <code className="text-sm text-gray-900 font-mono">{children}</code>
             </pre>
           );
         },
         pre: ({ children }) => (
-          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-x-auto">
+          <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto text-gray-900">
             {children}
           </pre>
         ),
