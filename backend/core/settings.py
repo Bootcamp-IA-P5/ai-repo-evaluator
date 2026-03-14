@@ -16,7 +16,7 @@ class AIProvider(str, Enum):
     """Supported AI providers."""
     OPENAI = "openai"
     GEMINI = "gemini"
-    GROK = "grok"
+    GROQ = "groq"
 
 
 class Settings(BaseSettings):
@@ -59,8 +59,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = ""
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = ""
-    GROK_API_KEY: str = ""
-    GROK_MODEL: str = ""
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = ""
     EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     
 
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
         extra="ignore"  # Ignore extra environment variables
     )
 
-    @field_validator('OPENAI_API_KEY', 'GEMINI_API_KEY', 'GROK_API_KEY', mode='before')
+    @field_validator('OPENAI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', mode='before')
     @classmethod
     def validate_api_keys(cls, v: str, info) -> str:
         """Validate that API keys are provided."""
@@ -95,7 +95,7 @@ class Settings(BaseSettings):
             raise ValueError(f"{info.field_name} must be provided in .env file")
         return v
     
-    @field_validator('OPENAI_MODEL', 'GEMINI_MODEL', 'GROK_MODEL', mode='before')
+    @field_validator('OPENAI_MODEL', 'GEMINI_MODEL', 'GROQ_MODEL', mode='before')
     @classmethod
     def validate_models(cls, v: str, info) -> str:
         """Validate that models are provided."""
@@ -114,8 +114,8 @@ def get_api_key(provider: AIProvider) -> str:
         return settings.OPENAI_API_KEY
     elif provider == AIProvider.GEMINI:
         return settings.GEMINI_API_KEY
-    elif provider == AIProvider.GROK:
-        return settings.GROK_API_KEY
+    elif provider == AIProvider.GROQ:
+        return settings.GROQ_API_KEY
     else:
         raise ValueError(f"Unknown provider: {provider}")
     
@@ -126,8 +126,8 @@ def get_model(provider: AIProvider) -> str:
         return settings.OPENAI_MODEL
     elif provider == AIProvider.GEMINI:
         return settings.GEMINI_MODEL
-    elif provider == AIProvider.GROK:
-        return settings.GROK_MODEL
+    elif provider == AIProvider.GROQ:
+        return settings.GROQ_MODEL
     else:
         raise ValueError(f"Unknown provider: {provider}")
     

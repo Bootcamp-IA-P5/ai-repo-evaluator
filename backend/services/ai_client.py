@@ -19,18 +19,18 @@ class AIProvider(str, Enum):
     Attributes:
         OPENAI: OpenAI API provider
         GEMINI: Google Gemini API provider  
-        GROK: Grok API provider
+        GROQ: Groq API provider
     """
     OPENAI = "openai"
     GEMINI = "gemini"
-    GROK = "grok"
+    GROQ = "groq"
 
 
 class AIClient:
     """AI client for interacting with different AI service providers.
     
     This class provides a unified interface for connecting to and communicating
-    with various AI providers (OpenAI, Gemini, Grok) for code evaluation tasks.
+    with various AI providers (OpenAI, Gemini, Groq) for code evaluation tasks.
     It handles authentication, client initialization, and chat interactions.
     
     Attributes:
@@ -106,9 +106,9 @@ class AIClient:
                     error=str(e)
                 ))
 
-        if self.provider == AIProvider.GROK:
+        if self.provider == AIProvider.GROQ:
             try:
-                api_key = self.api_key or get_api_key(AIProvider.GROK)
+                api_key = self.api_key or get_api_key(AIProvider.GROQ)
                 return Groq(api_key=api_key)
             except Exception as e:
                 raise ValueError(Messages.AIProvider.INITIALIZATION_FAILED.format(
@@ -168,7 +168,7 @@ class AIClient:
             )
             return response.text
 
-        if self.provider == AIProvider.GROK:
+        if self.provider == AIProvider.GROQ:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[

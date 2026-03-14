@@ -207,15 +207,15 @@ def get_evaluation(
                                 "ai_model": "gemini-1.5-pro"
                             }
                         },
-                        "grok_evaluation": {
-                            "summary": "Evaluation with Grok configuration",
-                            "description": "Create an evaluation using Grok (API key via X-API-Key header)",
+                        "groq_evaluation": {
+                            "summary": "Evaluation with Groq configuration",
+                            "description": "Create an evaluation using Groq (API key via X-API-Key header)",
                             "value": {
                                 "repo_url": "https://github.com/student/backend-project",
                                 "rubric_id": 1,
                                 "briefing_path": "<FILE_UPLOAD_PATH>/project-briefing.pdf",
-                                "ai_provider": "grok",
-                                "ai_model": "grok-beta"
+                                "ai_provider": "groq",
+                                "ai_model": "groq-beta"
                             }
                         }
                     }

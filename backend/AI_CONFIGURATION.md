@@ -12,14 +12,14 @@ The evaluation endpoint now supports specifying custom AI providers, models, and
 
 The `EvaluationRequest` schema now includes three optional fields:
 
-- `ai_provider`: AI provider to use (openai, gemini, grok)
+- `ai_provider`: AI provider to use (openai, gemini, groq)
 - `ai_model`: Specific model for the selected provider
 - `ai_api_key`: API key for the provider
 
 ### Validation Rules
 
 - If any AI configuration field is provided, all three must be provided
-- `ai_provider` must be one of: "openai", "gemini", "grok"
+- `ai_provider` must be one of: "openai", "gemini", "groq"
 - `ai_model` and `ai_api_key` are required when `ai_provider` is specified
 
 ### Header Support
@@ -90,8 +90,8 @@ curl -X POST "http://localhost:8000/api/v1/evaluations" \
 - Models: gemini-1.5-pro, gemini-2.5-flash, etc.
 - API Key Format: `AIza...`
 
-### Grok
-- Models: grok-beta, etc.
+### Groq
+- Models: groq-beta, etc.
 - API Key Format: varies by provider
 
 ## Error Handling

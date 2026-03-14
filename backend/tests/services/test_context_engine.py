@@ -70,8 +70,8 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4")
     monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
     monkeypatch.setenv("GEMINI_MODEL", "gemini-pro")
-    monkeypatch.setenv("GROK_API_KEY", "fake-grok-key")
-    monkeypatch.setenv("GROK_MODEL", "grok-1")
+    monkeypatch.setenv("GROQ_API_KEY", "fake-groq-key")
+    monkeypatch.setenv("GROQ_MODEL", "groq-1")
     monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-3-small")
     # Force Settings to re-read from patched env
     import importlib

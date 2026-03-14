@@ -303,12 +303,12 @@ class TestRunEvaluationTask:
         assert mock_evaluation.status == settings.EVALUATION_STATUS_FAILED
         assert "Evaluation failed: Failed to parse AI response: Expecting value: line 1 column 1 (char 0)" in mock_evaluation.ai_summary
 
-    @pytest.mark.parametrize("provider", [AIProvider.OPENAI, AIProvider.GEMINI, AIProvider.GROK])
-    # @pytest.mark.parametrize("model", ['chatgpt', 'gemini', 'grok'])
+    @pytest.mark.parametrize("provider", [AIProvider.OPENAI, AIProvider.GEMINI, AIProvider.GROQ])
+    # @pytest.mark.parametrize("model", ['chatgpt', 'gemini', 'groq'])
     # @pytest.mark.parametrize("api_key", [
     #     'openaiabcdefghijklmnopqrstuvwxyz', 
     #     'geminiabcdefghijklmnopqrstuvwxyz', 
-    #     'grokabcdefghijklmnopqrstuvwxyz'
+    #     'groqabcdefghijklmnopqrstuvwxyz'
     # ])
     @patch('services.ai_evaluation_engine.AIClient')
     def test_ai_engine_initialization_with_providers(self, mock_ai_client, provider):
@@ -318,8 +318,8 @@ class TestRunEvaluationTask:
             mock_ai_client.assert_called_with(provider=provider, model='chatgpt', api_key='openaiabcdefghijklmnopqrstuvwxyz')
         elif provider == AIProvider.GEMINI:
             mock_ai_client.assert_called_with(provider=provider, model='gemini', api_key='geminiabcdefghijklmnopqrstuvwxyz')
-        elif provider == AIProvider.GROK:
-            mock_ai_client.assert_called_with(provider=provider, model='grok', api_key='grokabcdefghijklmnopqrstuvwxyz')
+        elif provider == AIProvider.GROQ:
+            mock_ai_client.assert_called_with(provider=provider, model='groq', api_key='groqabcdefghijklmnopqrstuvwxyz')
         
 
     @patch('services.ai_evaluation_engine.SessionLocal')
