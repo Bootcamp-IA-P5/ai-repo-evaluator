@@ -38,14 +38,27 @@ class AIEvaluationEngine:
     - AI summary generation
     """
 
-    def __init__(self, provider: AIProvider = AIProvider.GEMINI, model: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        provider: AIProvider = AIProvider.GEMINI,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        embedding_provider: Optional[str] = None,
+        embedding_model: Optional[str] = None,
+        embedding_api_key: Optional[str] = None,
+    ):
         """Initialize the AI evaluation engine with required services."""
         self.git_loader = GitLoaderService()
         # If no API key provided, use settings
         if api_key is None:
             api_key = get_api_key(provider)
             model = get_model(provider)
-        logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5]}")
+            
+        self.embedding_provider = embedding_provider
+        self.embedding_model = embedding_model
+        self.embedding_api_key = embedding_api_key
+        
+        logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5] if api_key else 'None'}")
         self.ai_client = AIClient(provider=provider, model=model, api_key=api_key)
 
     def evaluate_repository(
@@ -95,7 +108,12 @@ class AIEvaluationEngine:
         # 3. Build ContextEngine ONCE for all criteria (avoids re-vectorizing per criterion)
         try:
             all_documents = list(briefing_chunks) + list(code_chunks)
-            context_engine = ContextEngine(all_documents)
+            context_engine = ContextEngine(
+                all_documents,
+                embedding_provider=self.embedding_provider,
+                embedding_model=self.embedding_model,
+                embedding_api_key=self.embedding_api_key,
+            )
             logger.info(f"ContextEngine built with {len(all_documents)} documents")
         except Exception as e:
             logger.error(f"Failed to build ContextEngine: {e}")

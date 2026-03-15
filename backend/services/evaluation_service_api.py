@@ -36,6 +36,7 @@ class EvaluationServiceAPI:
         evaluation_request,
         background_tasks: BackgroundTasks,
         db_url: str,
+        embedding_api_key: str = None,
     ) -> APIResponse[EvaluationResponse]:
         """
         Create a new evaluation with processed briefing.
@@ -48,7 +49,7 @@ class EvaluationServiceAPI:
             evaluation_request: The evaluation data to create
             background_tasks: FastAPI BackgroundTasks for async processing
             db_url: Database URL for background task session
-
+            embedding_api_key: Optional API key for the chosen embedding provider
         Returns:
             APIResponse containing the created evaluation with status 'pending',
             or error information if validation fails.
@@ -119,6 +120,9 @@ class EvaluationServiceAPI:
                 ai_provider=evaluation_request.ai_provider,
                 ai_model=evaluation_request.ai_model,
                 ai_api_key=evaluation_request.ai_api_key,
+                embedding_provider=evaluation_request.embedding_provider,
+                embedding_model=evaluation_request.embedding_model,
+                embedding_api_key=embedding_api_key,
             )
 
             os.remove(evaluation_request.briefing_path)
@@ -230,7 +234,10 @@ def run_evaluation_task(
     db_url: str,
     ai_provider: str = None,
     ai_model: str = None,
-    ai_api_key: str = None
+    ai_api_key: str = None,
+    embedding_provider: str = None,
+    embedding_model: str = None,
+    embedding_api_key: str = None,
 ):
     """
     Background task for running the AI evaluation process.
@@ -262,10 +269,35 @@ def run_evaluation_task(
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
-        # 2. Initialize AI evaluation engine
+        # 2. Resolve embedding configuration based on business logic
+        if embedding_provider:
+            # User explicitly chose an embedding provider (e.g. they use Groq for LLM and OpenAI for embeddings)
+            resolved_emb_provider = embedding_provider
+            resolved_emb_model = embedding_model
+            resolved_emb_key = embedding_api_key
+        elif ai_provider in ("gemini", "openai"):
+            # Gemini/OpenAI provide both LLM and embeddings; use same provider and key
+            resolved_emb_provider = ai_provider
+            resolved_emb_model = None  # ContextEngine will use default model for that provider
+            resolved_emb_key = ai_api_key
+        else:
+            # Groq without explicit embedding provider, or no config at all -> fallback to system defaults
+            resolved_emb_provider = None
+            resolved_emb_model = None
+            resolved_emb_key = None
+            
+        # 3. Initialize AI evaluation engine
         if not ai_provider:
             ai_provider = AIProvider.GEMINI
-        ai_engine = AIEvaluationEngine(provider = ai_provider, model = ai_model, api_key = ai_api_key)
+            
+        ai_engine = AIEvaluationEngine(
+            provider=ai_provider, 
+            model=ai_model, 
+            api_key=ai_api_key,
+            embedding_provider=resolved_emb_provider,
+            embedding_model=resolved_emb_model,
+            embedding_api_key=resolved_emb_key,
+        )
 
         # 3. Parse briefing chunks from snapshot
         try:

@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = ""
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = ""
+    EMBEDDING_PROVIDER: str = "gemini"
     EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     
 

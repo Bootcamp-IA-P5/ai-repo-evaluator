@@ -238,9 +238,10 @@ class TestEvaluationServiceAPICreate:
         assert "not found" in response.errors[0].lower()
         assert response.message == "Failed to process briefing"
 
+    @patch("services.evaluation_service_api.os.remove")
     @patch("services.evaluation_service_api.BriefingProcessor")
     def test_create_success(
-        self, mock_processor_class, db_session: Session, sample_rubric
+        self, mock_processor_class, mock_os_remove, db_session: Session, sample_rubric
     ):
         """Test create returns created evaluation with pending status."""
         from schemas.evaluation import EvaluationRequest
@@ -278,9 +279,10 @@ class TestEvaluationServiceAPICreate:
         # Verify background task was queued
         mock_background_tasks.add_task.assert_called_once()
 
+    @patch("services.evaluation_service_api.os.remove")
     @patch("services.evaluation_service_api.BriefingProcessor")
     def test_create_database_error(
-        self, mock_processor_class, rubric_service
+        self, mock_processor_class, mock_os_remove, rubric_service
     ):
         """Test create handles database errors gracefully."""
         from schemas.evaluation import EvaluationRequest

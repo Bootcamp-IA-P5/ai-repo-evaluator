@@ -63,20 +63,6 @@ def fake_embeddings():
     return FakeEmbeddings(size=FAKE_DIM)
 
 
-@pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch):
-    """Set environment variables needed by Settings to avoid validation errors."""
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
-    monkeypatch.setenv("OPENAI_MODEL", "gpt-4")
-    monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
-    monkeypatch.setenv("GEMINI_MODEL", "gemini-pro")
-    monkeypatch.setenv("GROQ_API_KEY", "fake-groq-key")
-    monkeypatch.setenv("GROQ_MODEL", "groq-1")
-    monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    # Force Settings to re-read from patched env
-    import importlib
-    import core.settings
-    importlib.reload(core.settings)
 
 
 @pytest.fixture
@@ -87,7 +73,7 @@ def engine(fake_embeddings):
     docs = _sample_dicts(5)
 
     with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
-        return ContextEngine(documents=docs, google_api_key="fake-gemini-key")
+        return ContextEngine(documents=docs, embedding_provider="gemini", embedding_api_key="fake-gemini-key")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +95,7 @@ class TestInit:
 
         with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
             with pytest.raises(ValueError, match="empty"):
-                ContextEngine(documents=[], google_api_key="fake-gemini-key")
+                ContextEngine(documents=[], embedding_provider="gemini", embedding_api_key="fake-gemini-key")
 
     def test_init_accepts_document_objects(self, fake_embeddings):
         """Verify constructor works with langchain Document objects too."""
@@ -118,9 +104,46 @@ class TestInit:
         docs = _sample_documents(3)
 
         with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings):
-            engine = ContextEngine(documents=docs, google_api_key="fake-gemini-key")
+            engine = ContextEngine(documents=docs, embedding_provider="gemini", embedding_api_key="fake-gemini-key")
 
         assert engine.vector_store is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests: Factory / Embeddings Creation
+# ---------------------------------------------------------------------------
+
+
+class TestFactory:
+    """Tests for ContextEngine._create_embeddings() and provider logic."""
+
+    def test_factory_creates_google_embeddings(self, fake_embeddings):
+        """Verify default provider creates GoogleGenerativeAIEmbeddings."""
+        from services.context_engine import ContextEngine
+        
+        docs = _sample_dicts(1)
+        with patch("services.context_engine.GoogleGenerativeAIEmbeddings", return_value=fake_embeddings) as mock_gemini:
+            engine = ContextEngine(documents=docs, embedding_provider="gemini", embedding_api_key="test-key")
+            mock_gemini.assert_called_once()
+            assert engine.embeddings == fake_embeddings
+
+    def test_factory_creates_openai_embeddings(self, fake_embeddings):
+        """Verify openai provider creates OpenAIEmbeddings."""
+        from services.context_engine import ContextEngine
+        
+        docs = _sample_dicts(1)
+        with patch("services.context_engine.OpenAIEmbeddings", return_value=fake_embeddings) as mock_openai:
+            engine = ContextEngine(documents=docs, embedding_provider="openai", embedding_api_key="test-key")
+            mock_openai.assert_called_once()
+            assert engine.embeddings == fake_embeddings
+
+    def test_factory_raises_for_unsupported_provider(self, fake_embeddings):
+        """Verify unsupported provider raises ValueError."""
+        from services.context_engine import ContextEngine
+        
+        docs = _sample_dicts(1)
+        with pytest.raises(ValueError, match="Unsupported embedding provider"):
+            ContextEngine(documents=docs, embedding_provider="unknown-provider")
 
 
 # ---------------------------------------------------------------------------

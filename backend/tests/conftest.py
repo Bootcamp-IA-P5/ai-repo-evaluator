@@ -20,6 +20,33 @@ from models import Base, Rubric, Criterion, Level
 
 
 # =============================================================================
+# ENVIRONMENT FIXTURES
+# =============================================================================
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_env_vars():
+    """
+    Set environment variables needed by pydantic Settings globally for all tests.
+    This prevents ValidationError during test collection when imports trigger
+    Settings instantiation before individual test fixtures run.
+    """
+    import os
+    os.environ["OPENAI_API_KEY"] = "sk-test-fake-key"
+    os.environ["OPENAI_MODEL"] = "gpt-4"
+    os.environ["GEMINI_API_KEY"] = "fake-gemini-key"
+    os.environ["GEMINI_MODEL"] = "gemini-pro"
+    os.environ["GROQ_API_KEY"] = "fake-groq-key"
+    os.environ["GROQ_MODEL"] = "groq-1"
+    os.environ["EMBEDDING_MODEL"] = "text-embedding-3-small"
+    
+    # Reload settings if already imported
+    import sys
+    if "core.settings" in sys.modules:
+        import importlib
+        import core.settings
+        importlib.reload(core.settings)
+
+# =============================================================================
 # DATABASE FIXTURES
 # =============================================================================
 

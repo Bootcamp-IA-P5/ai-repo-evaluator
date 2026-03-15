@@ -11,6 +11,7 @@ for each rubric criterion evaluation.
 
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 
 from core.logging_config import logger
@@ -28,34 +29,38 @@ class ContextEngine:
     evaluation criterion.
 
     Attributes:
-        embeddings: GoogleGenerativeAIEmbeddings instance for vectorization.
+        embeddings: The Embeddings instance (Google or OpenAI) for vectorization.
         vector_store: FAISS index built from the provided documents.
     """
 
-    def __init__(self, documents: list[DocumentInput], google_api_key: str = None):
+    def __init__(
+        self,
+        documents: list[DocumentInput],
+        embedding_provider: str = None,
+        embedding_model: str = None,
+        embedding_api_key: str = None,
+    ):
         """
         Initialize the context engine with documents and build the FAISS index.
 
         Args:
             documents: List of document dicts with 'page_content' and 'metadata'
                     keys, or langchain Document objects.
-            google_api_key: Google API key for Gemini embeddings. If None, reads
-                            from settings.GEMINI_API_KEY (BYOK pattern).
+            embedding_provider: Optional "gemini" or "openai". Evaluates to settings default if None.
+            embedding_model: Optional specific model name. Evaluates to settings default if None.
+            embedding_api_key: Optional API key. Evaluates to environment key if None.
 
         Raises:
-            ValueError: If documents list is empty.
+            ValueError: If documents list is empty or provider is unsupported.
         """
         if not documents:
             raise ValueError("Cannot create ContextEngine with an empty document list.")
 
-        # Lazy import to avoid triggering pydantic validation at module level
-        from core.settings import settings
-
-        # BYOK: use provided key or fall back to environment config
-        api_key = google_api_key or settings.GEMINI_API_KEY
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model=settings.EMBEDDING_MODEL,
-            google_api_key=api_key,
+        # Create the correct embeddings client using the factory method
+        self.embeddings = self._create_embeddings(
+            provider=embedding_provider,
+            model=embedding_model,
+            api_key=embedding_api_key
         )
 
         # Extract texts and metadatas from documents (support both dict and Document)
@@ -149,3 +154,48 @@ s
                 )
 
         return texts, metadatas
+
+    @staticmethod
+    def _create_embeddings(provider: str = None, model: str = None, api_key: str = None):
+        """
+        Factory method to create the appropriate Embeddings instance.
+        """
+        from core.settings import settings, get_api_key
+        from services.ai_client import AIProvider
+
+        # Resolve provider
+        resolved_provider = (provider or settings.EMBEDDING_PROVIDER).lower()
+
+        # Resolve model
+        resolved_model = model or settings.EMBEDDING_MODEL
+
+        # Create specific embedding provider
+        if resolved_provider == "gemini":
+            # For Gemini, use the key or fallback to environment API key
+            from core.settings import AIProvider
+            resolved_key = api_key or get_api_key(AIProvider.GEMINI)
+            if not resolved_key:
+                raise ValueError("Embedding API key is required for Gemini embeddings")
+                
+            return GoogleGenerativeAIEmbeddings(
+                model=resolved_model,
+                google_api_key=resolved_key,
+            )
+            
+        elif resolved_provider == "openai":
+            # For OpenAI, default model if not explicitly configured in settings for embeddings
+            if not model and resolved_model == settings.EMBEDDING_MODEL:
+                resolved_model = "text-embedding-3-small" # Sensible default for OpenAI
+                
+            from core.settings import AIProvider
+            resolved_key = api_key or get_api_key(AIProvider.OPENAI)
+            if not resolved_key:
+                raise ValueError("Embedding API key is required for OpenAI embeddings")
+                
+            return OpenAIEmbeddings(
+                model=resolved_model,
+                api_key=resolved_key,
+            )
+            
+        else:
+            raise ValueError(f"Unsupported embedding provider: {resolved_provider}. Supported providers: gemini, openai")

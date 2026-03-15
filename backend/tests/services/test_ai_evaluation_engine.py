@@ -30,16 +30,18 @@ class TestAIEvaluationEngine:
             self.ai_engine.git_loader = Mock()
             self.ai_engine.ai_client = mock_ai_client.return_value
 
-    def test_evaluate_repository_success(self):
+    @patch('services.ai_evaluation_engine.ContextEngine')
+    def test_evaluate_repository_success(self, mock_context_engine_class):
         """Test successful evaluation of a repository."""
         # Mock data
         evaluation_id = 1
         repo_url = "https://github.com/test/repo"
         rubric_id = 1
         
+        from langchain_core.documents import Document
         # Mock code chunks from git loader
         mock_code_chunks = [
-            Mock(page_content="def test_function(): pass", metadata={"file_path": "test.py"})
+            Document(page_content="def test_function(): pass", metadata={"file_path": "test.py"})
         ]
         self.ai_engine.git_loader.fetch_and_process.return_value = mock_code_chunks
         
@@ -62,8 +64,14 @@ class TestAIEvaluationEngine:
                         {'id': 2, 'title': 'Good', 'description': 'Good code', 'score_points': 3.0}
                     ]
                 }
-            ]
+            ],
+            'max_possible_score': 4.0
         }
+        
+        # Mock ContextEngine
+        mock_context_engine = Mock()
+        mock_context_engine.get_relevant_context.return_value = [{"page_content": "mocked context from vector store", "metadata": {"file_path": "test.py"}}]
+        mock_context_engine_class.return_value = mock_context_engine
         
         # Mock AIClient response
         self.ai_engine.ai_client.chat.return_value = '''
@@ -86,7 +94,7 @@ class TestAIEvaluationEngine:
             )
             
             # Verify
-            assert result['total_score'] == 4.0
+            assert result['total_score'] == 100.0
             assert len(result['findings']) == 1
             assert result['findings'][0]['score_points'] == 4.0
             assert result['findings'][0]['file_path'] == 'test.py'
@@ -119,10 +127,12 @@ class TestAIEvaluationEngine:
                     briefing_chunks=[]
                 )
 
-    def test_evaluate_repository_ai_client_failure(self):
+    @patch('services.ai_evaluation_engine.ContextEngine')
+    def test_evaluate_repository_ai_client_failure(self, mock_context_engine_class):
         """Test evaluation continues when AI Client fails for a criterion."""
+        from langchain_core.documents import Document
         # Mock data
-        mock_code_chunks = [Mock(page_content="test", metadata={"file_path": "test.py"})]
+        mock_code_chunks = [Document(page_content="test", metadata={"file_path": "test.py"})]
         self.ai_engine.git_loader.fetch_and_process.return_value = mock_code_chunks
         
         mock_rubric_data = {
@@ -137,8 +147,14 @@ class TestAIEvaluationEngine:
                         {'id': 1, 'title': 'Excellent', 'description': 'Perfect code', 'score_points': 4.0}
                     ]
                 }
-            ]
+            ],
+            'max_possible_score': 4.0
         }
+        
+        # Mock ContextEngine
+        mock_context_engine = Mock()
+        mock_context_engine.get_relevant_context.return_value = [{"page_content": "mocked context from vector store", "metadata": {"file_path": "test.py"}}]
+        mock_context_engine_class.return_value = mock_context_engine
         
         # Mock AIClient failure
         self.ai_engine.ai_client.chat.side_effect = Exception("API Error")
@@ -304,23 +320,17 @@ class TestRunEvaluationTask:
         assert "Evaluation failed: Failed to parse AI response: Expecting value: line 1 column 1 (char 0)" in mock_evaluation.ai_summary
 
     @pytest.mark.parametrize("provider", [AIProvider.OPENAI, AIProvider.GEMINI, AIProvider.GROQ])
-    # @pytest.mark.parametrize("model", ['chatgpt', 'gemini', 'groq'])
-    # @pytest.mark.parametrize("api_key", [
-    #     'openaiabcdefghijklmnopqrstuvwxyz', 
-    #     'geminiabcdefghijklmnopqrstuvwxyz', 
-    #     'groqabcdefghijklmnopqrstuvwxyz'
-    # ])
     @patch('services.ai_evaluation_engine.AIClient')
     def test_ai_engine_initialization_with_providers(self, mock_ai_client, provider):
-        """Test that AIEvaluationEngine initializes the correct AIClient."""
+        """Test that AIEvaluationEngine initializes the correct AIClient using environment variables."""
+        # This test relies on the global mock_env_vars fixture in conftest.py
         AIEvaluationEngine(provider=provider)
         if provider == AIProvider.OPENAI:
-            mock_ai_client.assert_called_with(provider=provider, model='chatgpt', api_key='openaiabcdefghijklmnopqrstuvwxyz')
+            mock_ai_client.assert_called_with(provider=provider, model='gpt-4', api_key='sk-test-fake-key')
         elif provider == AIProvider.GEMINI:
-            mock_ai_client.assert_called_with(provider=provider, model='gemini', api_key='geminiabcdefghijklmnopqrstuvwxyz')
+            mock_ai_client.assert_called_with(provider=provider, model='gemini-pro', api_key='fake-gemini-key')
         elif provider == AIProvider.GROQ:
-            mock_ai_client.assert_called_with(provider=provider, model='groq', api_key='groqabcdefghijklmnopqrstuvwxyz')
-        
+            mock_ai_client.assert_called_with(provider=provider, model='groq-1', api_key='fake-groq-key')
 
     @patch('services.ai_evaluation_engine.SessionLocal')
     @patch('services.ai_evaluation_engine.AIEvaluationEngine')
