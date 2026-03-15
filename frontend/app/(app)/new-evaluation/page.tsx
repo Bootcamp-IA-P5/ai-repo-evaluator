@@ -197,18 +197,17 @@ export default function NewEvaluationPage() {
         briefing_path: briefingPath,
       };
 
-      // Custom provider/model requires BYOK. If no API key is provided,
-      // omit AI fields entirely so backend defaults (Gemini) are used.
-      const hasCustomSelection = form.provider !== '' || form.model !== '';
-      if (apiKey) {
-        if (!form.provider || !form.model) {
-          throw new Error('Si introduces una clave API, también debes seleccionar proveedor y modelo.');
-        }
-        headers['X-API-Key'] = apiKey;
+      // Send custom AI configuration when provider+model are selected.
+      // If API key is omitted, backend should use provider credentials from .env.
+      const hasCustomSelection = form.provider !== '' && form.model !== '';
+      if (hasCustomSelection) {
         payload.ai_provider = form.provider;
         payload.ai_model = form.model;
-      } else if (hasCustomSelection) {
-        throw new Error('Para usar un proveedor/modelo personalizado, introduce una clave API. Si no, usa la opción predeterminada del servidor.');
+      }
+
+      // Optional BYOK via header.
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
       }
 
       const res = await fetch('/api/v1/evaluations/', {
@@ -332,7 +331,7 @@ export default function NewEvaluationPage() {
               options={AI_PROVIDERS}
               value={form.provider}
               onChange={handleProviderChange}
-              helperText="Si no introduces clave API, usa la opción predeterminada del servidor."
+              helperText="Puedes elegir proveedor/modelo sin clave API para usar la configuración del servidor (.env)."
               fullWidth
             />
 
@@ -359,7 +358,7 @@ export default function NewEvaluationPage() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, apiKey: e.target.value }))
               }
-              helperText="Déjalo vacío para usar la configuración predeterminada del servidor (Gemini)."
+              helperText="Opcional: si la dejas vacía, se usará la clave configurada en el servidor para el proveedor seleccionado."
               rightIcon={
                 <button
                   type="button"
