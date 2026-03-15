@@ -20,8 +20,9 @@ import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services
 // ---------------------------------------------------------------------------
 
 const AI_PROVIDERS: SelectOption[] = [
+  { value: '',       label: 'Predeterminado del servidor (Gemini)' },
   { value: 'gemini', label: 'Gemini (Google)' },
-  { value: 'grok',   label: 'Grok (xAI)' },
+  { value: 'groq',   label: 'Groq' },
   { value: 'openai', label: 'OpenAI' },
 ];
 
@@ -31,10 +32,10 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     { value: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
   ],
-  grok: [
-    { value: 'grok-beta', label: 'Grok Beta' },
-    { value: 'grok-2',    label: 'Grok 2' },
-    { value: 'grok-2-mini', label: 'Grok 2 Mini' },
+  groq: [
+    { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
+    { value: 'llama3-8b-8192',          label: 'LLaMA 3 8B' },
+    { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
   ],
   openai: [
     { value: 'gpt-4o',      label: 'GPT-4o' },
@@ -43,9 +44,9 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
-// Gemini is pre-selected so users can submit without touching the AI fields.
-const DEFAULT_PROVIDER = 'gemini';
-const DEFAULT_MODEL    = 'gemini-2.0-flash';
+// Empty values mean "use backend defaults" (Gemini configured server-side).
+const DEFAULT_PROVIDER = '';
+const DEFAULT_MODEL = '';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,7 +77,7 @@ export default function NewEvaluationPage() {
   const [rubricsLoading, setRubricsLoading] = useState(true);
   const [rubricsError, setRubricsError] = useState(false);
 
-  // Form — Gemini is pre-selected so the user can submit without touching the AI fields.
+  // Form — empty AI config means the backend default provider/model is used.
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
@@ -124,7 +125,7 @@ export default function NewEvaluationPage() {
     ? (MODELS_BY_PROVIDER[form.provider] ?? [])
     : [];
 
-  // When provider changes, auto-select the first model of that provider.
+  // When provider changes, auto-select the first model for convenience.
   const handleProviderChange = (value: string) => {
     const providerModels = MODELS_BY_PROVIDER[value] ?? [];
     const firstModelValue = providerModels[0]?.value ?? '';
@@ -189,20 +190,31 @@ export default function NewEvaluationPage() {
         'Content-Type': 'application/json',
       };
       const apiKey = form.apiKey.trim();
+
+      const payload: Record<string, unknown> = {
+        rubric_id: parseInt(form.rubricId, 10),
+        repo_url: form.repoUrl,
+        briefing_path: briefingPath,
+      };
+
+      // Custom provider/model requires BYOK. If no API key is provided,
+      // omit AI fields entirely so backend defaults (Gemini) are used.
+      const hasCustomSelection = form.provider !== '' || form.model !== '';
       if (apiKey) {
+        if (!form.provider || !form.model) {
+          throw new Error('Si introduces una clave API, también debes seleccionar proveedor y modelo.');
+        }
         headers['X-API-Key'] = apiKey;
+        payload.ai_provider = form.provider;
+        payload.ai_model = form.model;
+      } else if (hasCustomSelection) {
+        throw new Error('Para usar un proveedor/modelo personalizado, introduce una clave API. Si no, usa la opción predeterminada del servidor.');
       }
 
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          rubric_id: parseInt(form.rubricId, 10),
-          repo_url: form.repoUrl,
-          briefing_path: briefingPath,
-          ai_provider: form.provider,
-          ai_model: form.model,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json().catch(() => ({})) as {
@@ -232,7 +244,7 @@ export default function NewEvaluationPage() {
     label: r.title,
   }));
 
-  // Provider and model are optional — the backend uses Gemini by default when omitted.
+  // Provider/model/API key are optional. When omitted, backend default AI config is used.
   // briefingServerPath is set only after a successful upload, so it is the right guard.
   const isFormValid =
     form.rubricId !== '' &&
@@ -316,10 +328,11 @@ export default function NewEvaluationPage() {
             {/* AI Provider */}
             <Select
               label="Proveedor de IA"
-              placeholder="Selecciona un proveedor..."
+              placeholder="Predeterminado del servidor (Gemini)"
               options={AI_PROVIDERS}
               value={form.provider}
               onChange={handleProviderChange}
+              helperText="Si no introduces clave API, usa la opción predeterminada del servidor."
               fullWidth
             />
 
@@ -333,6 +346,7 @@ export default function NewEvaluationPage() {
               value={form.model}
               onChange={(val) => setForm((prev) => ({ ...prev, model: val }))}
               disabled={!form.provider}
+              helperText={!form.provider ? 'No es necesario para la configuración predeterminada.' : undefined}
               fullWidth
             />
 
@@ -345,7 +359,7 @@ export default function NewEvaluationPage() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, apiKey: e.target.value }))
               }
-              helperText="Déjalo vacío para usar la clave del servidor."
+              helperText="Déjalo vacío para usar la configuración predeterminada del servidor (Gemini)."
               rightIcon={
                 <button
                   type="button"
