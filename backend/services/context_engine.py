@@ -160,9 +160,8 @@ s
         """
         Factory method to create the appropriate Embeddings instance.
         """
-        from core.settings import settings, get_api_key
-        from services.ai_client import AIProvider
-
+        from core.settings import settings, get_api_key, AIProvider
+        
         # Resolve provider
         resolved_provider = (provider or settings.EMBEDDING_PROVIDER).lower()
 
@@ -172,11 +171,10 @@ s
         # Create specific embedding provider
         if resolved_provider == "gemini":
             # For Gemini, use the key or fallback to environment API key
-            from core.settings import AIProvider
             resolved_key = api_key or get_api_key(AIProvider.GEMINI)
             if not resolved_key:
                 raise ValueError("Embedding API key is required for Gemini embeddings")
-                
+            
             return GoogleGenerativeAIEmbeddings(
                 model=resolved_model,
                 google_api_key=resolved_key,
@@ -184,10 +182,9 @@ s
             
         elif resolved_provider == "openai":
             # For OpenAI, default model if not explicitly configured in settings for embeddings
-            if not model and resolved_model == settings.EMBEDDING_MODEL:
+            if not resolved_model:
                 resolved_model = "text-embedding-3-small" # Sensible default for OpenAI
-                
-            from core.settings import AIProvider
+            
             resolved_key = api_key or get_api_key(AIProvider.OPENAI)
             if not resolved_key:
                 raise ValueError("Embedding API key is required for OpenAI embeddings")

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from core.logging_config import logger
-from core.settings import settings, get_api_key, get_model
+from core.settings import settings, get_api_key, get_model, AIProvider as SettingsAIProvider
 from core.database import SessionLocal
 from core.messages import Messages
 from models import Evaluation, Rubric, Criterion, Level, Finding
@@ -49,10 +49,11 @@ class AIEvaluationEngine:
     ):
         """Initialize the AI evaluation engine with required services."""
         self.git_loader = GitLoaderService()
-        # If no API key provided, use settings
+        # If no API key provided, use settings based on provider
         if api_key is None:
-            api_key = get_api_key(provider)
-            model = get_model(provider)
+            settings_provider = SettingsAIProvider(provider.value)
+            api_key = get_api_key(settings_provider)
+            model = get_model(settings_provider)
             
         self.embedding_provider = embedding_provider
         self.embedding_model = embedding_model

@@ -32,7 +32,7 @@ class EvaluationRequest(BaseModel):
     repo_url: str
     rubric_id: int
     briefing_path: str
-    ai_provider: Optional[str] = Field(None, description="AI provider: openai, gemini, or grok")
+    ai_provider: Optional[str] = Field(None, description="AI provider: openai, gemini, or groq")
     ai_model: Optional[str] = Field(None, description="Specific model for the selected provider")
     ai_api_key: Optional[str] = Field(None, description="API key for the selected provider")
 
@@ -41,7 +41,7 @@ class EvaluationRequest(BaseModel):
     def validate_ai_provider(cls, v):
         """Validate that ai_provider is one of the supported providers."""
         if v is not None:
-            valid_providers = ['openai', 'gemini', 'grok']
+            valid_providers = ['openai', 'gemini', 'groq']
             if v not in valid_providers:
                 raise ValueError(f"ai_provider must be one of: {', '.join(valid_providers)}")
         return v

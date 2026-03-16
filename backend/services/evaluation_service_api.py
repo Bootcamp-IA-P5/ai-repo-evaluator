@@ -260,11 +260,17 @@ def run_evaluation_task(
         evaluation.status = settings.EVALUATION_STATUS_PROCESSING
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
+        
+        # Normalize ai_provider to a string identifier for consistent handling
+        if isinstance(ai_provider, AIProvider):
+            ai_provider_normalized = ai_provider.value
+        else:
+            ai_provider_normalized = ai_provider
 
         # 2. Resolve embedding configuration based on business logic
-        if ai_provider in ("gemini", "openai"):
+        if ai_provider_normalized in ("gemini", "openai"):
             # Gemini/OpenAI provide both LLM and embeddings; use same provider and key
-            resolved_emb_provider = ai_provider
+            resolved_emb_provider = ai_provider_normalized
             resolved_emb_model = None  # ContextEngine will use default model for that provider
             resolved_emb_key = ai_api_key
         else:
@@ -274,11 +280,11 @@ def run_evaluation_task(
             resolved_emb_key = None
             
         # 3. Initialize AI evaluation engine
-        if not ai_provider:
-            ai_provider = AIProvider.GEMINI
+        if not ai_provider_normalized:
+            ai_provider_normalized = AIProvider.GEMINI.value
             
         ai_engine = AIEvaluationEngine(
-            provider=ai_provider, 
+            provider=ai_provider_normalized, 
             model=ai_model, 
             api_key=ai_api_key,
             embedding_provider=resolved_emb_provider,

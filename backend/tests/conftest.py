@@ -9,6 +9,17 @@ import sys
 import os
 from datetime import datetime
 
+# Set environment variables needed by pydantic Settings before any app modules are imported.
+# This ensures Settings can be instantiated safely during module import/collection.
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-fake-key")
+os.environ.setdefault("OPENAI_MODEL", "gpt-4")
+os.environ.setdefault("GEMINI_API_KEY", "fake-gemini-key")
+os.environ.setdefault("GEMINI_MODEL", "gemini-pro")
+os.environ.setdefault("GROQ_API_KEY", "fake-groq-key")
+os.environ.setdefault("GROQ_MODEL", "groq-1")
+os.environ.setdefault("EMBEDDING_API_KEY", "fake-embedding-key")
+os.environ.setdefault("EMBEDDING_MODEL", "text-embedding-3-small")
+
 # Add the backend directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,29 +33,8 @@ from models import Base, Rubric, Criterion, Level
 # =============================================================================
 # ENVIRONMENT FIXTURES
 # =============================================================================
-
-@pytest.fixture(scope="session", autouse=True)
-def mock_env_vars():
-    """
-    Set environment variables needed by pydantic Settings globally for all tests.
-    This prevents ValidationError during test collection when imports trigger
-    Settings instantiation before individual test fixtures run.
-    """
-    import os
-    os.environ["OPENAI_API_KEY"] = "sk-test-fake-key"
-    os.environ["OPENAI_MODEL"] = "gpt-4"
-    os.environ["GEMINI_API_KEY"] = "fake-gemini-key"
-    os.environ["GEMINI_MODEL"] = "gemini-pro"
-    os.environ["GROQ_API_KEY"] = "fake-groq-key"
-    os.environ["GROQ_MODEL"] = "groq-1"
-    os.environ["EMBEDDING_MODEL"] = "text-embedding-3-small"
-    
-    # Reload settings if already imported
-    import sys
-    if "core.settings" in sys.modules:
-        import importlib
-        import core.settings
-        importlib.reload(core.settings)
+# Environment variables are now set at import time above, before any app modules
+# (such as core.settings) are imported. No additional fixture-based setup is needed.
 
 # =============================================================================
 # DATABASE FIXTURES
