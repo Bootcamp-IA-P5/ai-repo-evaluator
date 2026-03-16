@@ -101,7 +101,6 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             {children}
           </td>
         ),
-        ),
         }}
       >
         {content}
