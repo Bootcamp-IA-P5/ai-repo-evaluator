@@ -89,15 +89,6 @@ def extract_api_key_from_header(
     return api_key
 
 
-def extract_embedding_api_key(
-    embedding_api_key: str = Header(None, alias="X-Embedding-API-Key")
-):
-    """
-    Extract embedding-specific API key from X-Embedding-API-Key header.
-    """
-    return embedding_api_key
-
-
 # =============================================================================
 # GET ENDPOINTS
 # =============================================================================
@@ -276,5 +267,4 @@ def create_evaluation(
         evaluation_request=evaluation_request,
         background_tasks=background_tasks,
         db_url=SQLALCHEMY_DATABASE_URL,
-        embedding_api_key=embedding_api_key,
     )

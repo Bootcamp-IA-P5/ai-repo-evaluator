@@ -35,8 +35,6 @@ class EvaluationRequest(BaseModel):
     ai_provider: Optional[str] = Field(None, description="AI provider: openai, gemini, or grok")
     ai_model: Optional[str] = Field(None, description="Specific model for the selected provider")
     ai_api_key: Optional[str] = Field(None, description="API key for the selected provider")
-    embedding_provider: Optional[str] = Field(None, description="Embedding provider: gemini or openai")
-    embedding_model: Optional[str] = Field(None, description="Embedding model name")
 
     @field_validator('ai_provider')
     @classmethod
@@ -48,16 +46,6 @@ class EvaluationRequest(BaseModel):
                 raise ValueError(f"ai_provider must be one of: {', '.join(valid_providers)}")
         return v
         
-    @field_validator('embedding_provider')
-    @classmethod
-    def validate_embedding_provider(cls, v):
-        """Validate that embedding_provider is one of the supported providers."""
-        if v is not None:
-            valid_providers = ['openai', 'gemini']
-            if v not in valid_providers:
-                raise ValueError(f"embedding_provider must be one of: {', '.join(valid_providers)}")
-        return v
-
     @field_validator('ai_model')
     @classmethod
     def validate_ai_model(cls, v, info):
