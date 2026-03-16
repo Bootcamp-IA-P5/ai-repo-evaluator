@@ -1,197 +1,299 @@
 <div align="center">
 
+<img src="./public/evaluAI.webp" alt="EvaluAI" width="84" />
+
 # EvaluAI Frontend
 
-### AI-powered repository evaluation interface with rubric-driven workflows
+### Modern UI for rubric-based AI repository evaluation
 
-![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js)
-![React](https://img.shields.io/badge/React-19.2.3-20232A?style=for-the-badge&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
-![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
+[![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2.3-20232A?style=for-the-badge&logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
+[![App Router](https://img.shields.io/badge/Next_App_Router-Enabled-111827?style=for-the-badge)](#architecture-overview)
+[![Proxy Layer](https://img.shields.io/badge/API_Proxy-/api/v1/*-0F766E?style=for-the-badge)](#api--proxy-integration)
 
 </div>
 
 ---
 
-## Table of Contents
+<div align="center">
 
-- [Product Overview](#product-overview)
-- [Architecture at a Glance](#architecture-at-a-glance)
-- [Tech Stack](#tech-stack)
-- [Pages and User Flows](#pages-and-user-flows)
-- [UI System and Components](#ui-system-and-components)
-- [API Integration and Proxy Strategy](#api-integration-and-proxy-strategy)
-- [Data and AI Configuration Flow](#data-and-ai-configuration-flow)
-- [Project Structure](#project-structure)
-- [Environment Variables](#environment-variables)
-- [Run and Build](#run-and-build)
-- [Docker Setup](#docker-setup)
-- [Responsive Design Guidelines](#responsive-design-guidelines)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
+### Quick Navigation
+
+[![Overview](https://img.shields.io/badge/Overview-Product-2563EB?style=flat-square)](#product-overview)
+[![Architecture](https://img.shields.io/badge/Architecture-Visual_Map-7C3AED?style=flat-square)](#architecture-overview)
+[![Pages](https://img.shields.io/badge/Pages-User_Flows-0D9488?style=flat-square)](#pages--flows)
+[![Components](https://img.shields.io/badge/Components-UI_Gallery-F59E0B?style=flat-square)](#components-gallery)
+[![Integration](https://img.shields.io/badge/Integration-API_and_Proxy-DC2626?style=flat-square)](#api--proxy-integration)
+[![Frontend Work](https://img.shields.io/badge/What_We_Did-Implemented-16A34A?style=flat-square)](#what-we-implemented-in-frontend)
+[![Responsive](https://img.shields.io/badge/Responsive-Mobile_Hardening-0891B2?style=flat-square)](#responsive-highlights)
+
+</div>
 
 ---
 
 ## Product Overview
 
-EvaluAI Frontend is the presentation and interaction layer for the repository evaluation platform.
+EvaluAI Frontend is the interactive layer of the platform.
 
-It enables users to:
-- Create evaluations from GitHub repositories.
-- Upload briefing documents (PDF).
-- Select AI provider/model or use server defaults.
-- Review historical evaluations with filtering and CSV export.
-- Inspect detailed AI findings and markdown-based summaries.
-- Manage rubrics, criteria, and scoring levels.
+It provides:
+- Rubric-driven evaluation creation.
+- Briefing PDF upload and validation.
+- Configurable AI provider/model selection.
+- Evaluation history with filters and CSV export.
+- Detailed report rendering with markdown findings.
+- Rubric and criteria management with level editing.
 
 ---
 
-## Architecture at a Glance
+## Architecture Overview
 
 ```mermaid
 flowchart LR
-  U[User Browser] --> N[Next.js App Router]
-  N --> UI[Pages + Components]
-  N --> P[/api/v1 Proxy Route Handler]
+  U[User Browser] --> N[Next.js 16 App Router]
+  N --> L[App Layout + Sidebar]
+  N --> P[/api/v1 Catch-all Proxy]
   P --> B[FastAPI Backend]
   B --> DB[(PostgreSQL)]
-  B --> AI[Gemini / Groq / OpenAI]
+  B --> AI[Gemini | Groq | OpenAI]
 ```
 
-### Why this architecture?
+### Why this architecture works well
 
-- Browser always talks to `localhost:3000`.
-- Backend calls are proxied server-side via `app/api/v1/[...path]/route.ts`.
-- Reduces CORS complexity and avoids leaking internal Docker hostnames.
+- Browser only talks to localhost:3000.
+- Backend calls are proxied server-side through route handlers.
+- Docker-internal hostnames are not exposed to the browser.
+- Redirect handling for 307/308 is controlled and safe.
+
+### Visual module map
+
+```mermaid
+mindmap
+  root((Frontend))
+    App Router
+      dashboard
+      new-evaluation
+      rubrics
+      past-evaluations
+      evaluation-detail
+    UI System
+      cards
+      forms
+      tables
+      markdown renderer
+      alerts and badges
+    Integration
+      route handler proxy
+      fetch-based calls
+      upload service
+    UX
+      desktop sidebar
+      mobile drawer
+      responsive hardening
+```
 
 ---
 
 ## Tech Stack
 
-| Category | Tools |
-|---|---|
-| Framework | Next.js 16.1.6 (App Router) |
-| UI Runtime | React 19.2.3 |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS v4 |
-| Markdown | react-markdown + remark-gfm |
-| HTTP | Native `fetch` (main) + Axios client abstraction |
-| Charts | Recharts |
-| Icons | Lucide React |
-
----
-
-## Pages and User Flows
-
-### Main Routes
-
-| Route | Purpose | File |
+| Area | Choice | Notes |
 |---|---|---|
-| `/` | Redirect entry point | `app/page.tsx` |
-| `/dashboard` | KPIs, recent evaluations, summary cards | `app/(app)/dashboard/page.tsx` |
-| `/new-evaluation` | Create evaluation flow | `app/(app)/new-evaluation/page.tsx` |
-| `/rubrics` | Rubric CRUD and criteria-level editing | `app/(app)/rubrics/page.tsx` |
-| `/past-evaluations` | Search/filter/export historical evaluations | `app/(app)/past-evaluations/page.tsx` |
-| `/past-evaluations/[id]` | Detailed report and findings analysis | `app/(app)/past-evaluations/[id]/page.tsx` |
-| `/components-demo` | Internal UI showcase | `app/components-demo/page.tsx` |
-
-### Navigation Layout
-
-- App shell is mounted in `app/(app)/layout.tsx`.
-- `Sidebar` provides desktop navigation + mobile drawer behavior.
-- `MainLayout` handles responsive top bar and content container.
+| Framework | Next.js 16.1.6 | App Router + Route Handlers |
+| Runtime UI | React 19.2.3 | Client components for interactive pages |
+| Language | TypeScript 5.x | Typed pages, services, and component props |
+| Styles | Tailwind CSS v4 | Utility-first responsive styling |
+| Markdown | react-markdown + remark-gfm | AI summary and finding rendering |
+| HTTP | fetch (primary), Axios client available | Relative routes through proxy |
+| Charts | Recharts | Metrics visualization |
+| Icons | Lucide React | Consistent iconography |
 
 ---
 
-## UI System and Components
+## Pages and Flows
 
-### Design Goals
+### Route table
 
-- Consistent visual language.
-- Reusable components with typed props.
-- Fast page assembly with minimal duplication.
-- Responsive-first behavior for mobile and desktop.
+| Route | Main purpose | File |
+|---|---|---|
+| / | Entry redirect to dashboard | app/page.tsx |
+| /dashboard | KPIs + recent evaluations | app/(app)/dashboard/page.tsx |
+| /new-evaluation | End-to-end creation flow | app/(app)/new-evaluation/page.tsx |
+| /rubrics | Rubric CRUD and level management | app/(app)/rubrics/page.tsx |
+| /past-evaluations | Search/filter/export history | app/(app)/past-evaluations/page.tsx |
+| /past-evaluations/[id] | Full report detail and findings | app/(app)/past-evaluations/[id]/page.tsx |
+| /components-demo | Visual playground | app/components-demo/page.tsx |
 
-### UI Components (`components/ui`)
+### User journey map
 
-| Component | Role |
-|---|---|
-| `Alert` | Feedback banners (success/error/info) |
-| `Badge` | Status labels and semantic tags |
-| `Button` | Variants, sizes, loading states |
-| `Card` | Section containers and composable layout |
-| `DropdownMenu` | Action menus |
-| `FileUpload` | PDF upload interaction |
-| `Input` | Text input with validation helpers |
-| `MarkdownRenderer` | Safe rendering for AI-generated markdown |
-| `Modal` | Dialog interactions |
-| `RubricBuilder` | Criteria and levels creation/editing |
-| `SearchBar` | Query input with UX helpers |
-| `Select` | Controlled select/dropdown |
-| `StatCard` | KPI visualization blocks |
-| `Table` | Reusable tabular data composition |
-| `Textarea` | Multiline input |
-
-### Layout Components (`components/layout`)
-
-| Component | Role |
-|---|---|
-| `MainLayout` | Application shell |
-| `Sidebar` | Main navigation |
-| `PageHeader` | Consistent page title/description/actions |
-| `Container` | Width and spacing control |
-
-For deep component usage examples, see `components/UI_COMPONENTS.md`.
+```mermaid
+flowchart TD
+  A[Open Dashboard] --> B[Create New Evaluation]
+  B --> C[Upload PDF Briefing]
+  C --> D[Select AI config or defaults]
+  D --> E[Submit Evaluation]
+  E --> F[Track in Past Evaluations]
+  F --> G[Open Detail Report]
+  G --> H[Review findings and suggestions]
+```
 
 ---
 
-## API Integration and Proxy Strategy
+## Components Gallery
 
-### Core principle
+### Core UI components
 
-All frontend pages call relative routes (`/api/v1/...`) and do **not** call backend host directly from the browser.
+| Component | Purpose | Typical usage |
+|---|---|---|
+| Button | Main actions | Save, submit, create |
+| Input / Textarea | Form controls | URL, names, descriptions |
+| Select | Provider/model/rubric selection | Controlled selections |
+| FileUpload | PDF upload | Briefing ingestion |
+| Card | Visual grouping | Dashboard and report sections |
+| Badge | Status and metadata chips | Completed, score, weight |
+| Alert | Inline feedback | Success/error notices |
+| Table | Structured datasets | Evaluations history |
+| StatCard | KPI cards | Dashboard metrics |
+| MarkdownRenderer | AI result rendering | Summary, evidence, suggestions |
+| RubricBuilder | Complex rubric authoring | Criteria and levels |
+
+### Layout primitives
+
+| Component | Responsibility |
+|---|---|
+| MainLayout | Sidebar + content shell |
+| Sidebar | Desktop nav + mobile drawer |
+| PageHeader | Reusable title/subtitle/action section |
+| Container | Max-width and spacing control |
+
+### Component examples
+
+```tsx
+import { Button, Card, CardContent, Badge, Select, Alert } from '@/components/ui';
+
+<Card className="rounded-xl border border-gray-200">
+  <CardContent className="space-y-4">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-semibold">Evaluation Status</h3>
+      <Badge variant="success">Completed</Badge>
+    </div>
+
+    <Select
+      label="AI Provider"
+      options={[{ value: 'groq', label: 'Groq' }]}
+      value="groq"
+      onChange={() => {}}
+      fullWidth
+    />
+
+    <Button variant="primary">Run Evaluation</Button>
+    <Alert variant="success" message="Evaluation started successfully" />
+  </CardContent>
+</Card>
+```
+
+---
+
+## Visual Demo Blocks (GIF-ready)
+
+If you add GIFs in public/images, they will render automatically in this section.
+
+Recommended file names:
+- public/images/dashboard-demo.gif
+- public/images/new-evaluation-flow.gif
+- public/images/rubrics-editor.gif
+- public/images/evaluation-detail-mobile.gif
+
+```md
+![Dashboard Demo](./public/images/dashboard-demo.gif)
+![New Evaluation Flow](./public/images/new-evaluation-flow.gif)
+![Rubrics Editor](./public/images/rubrics-editor.gif)
+![Mobile Evaluation Detail](./public/images/evaluation-detail-mobile.gif)
+```
+
+Tip:
+- Record 8-15 second loops.
+- Keep width around 1200px for good GitHub rendering.
+- Use one GIF per key flow.
+
+---
+
+## API / Proxy Integration
+
+### Request strategy
+
+All user-facing pages call relative routes:
+- /api/v1/evaluations/
+- /api/v1/rubrics/
+- /api/v1/evaluations/briefings
 
 ### Proxy layer
 
-- File: `app/api/v1/[...path]/route.ts`
-- Handles request forwarding to `BACKEND_URL`.
-- Preserves methods and body for redirect-safe behavior (`307/308`).
-- Applies header filtering and safe redirect validation.
+Implemented in app/api/v1/[...path]/route.ts.
 
-### API client utilities
+It provides:
+- Server-side forwarding to BACKEND_URL.
+- Controlled redirect handling (307/308).
+- Body-safe replay for redirects.
+- Hop-by-hop header filtering.
+- Safer upstream behavior for Docker development.
 
-- `lib/api/client.ts` contains Axios client setup.
-- Most current page calls use native `fetch`.
-- Shared file upload logic lives in `lib/services/file-upload.ts`.
+### HTTP client status
+
+- Current page implementations mostly use fetch.
+- Axios client exists in lib/api/client.ts for future standardized usage.
 
 ---
 
-## Data and AI Configuration Flow
+## Data and AI Flow
 
-### New Evaluation Flow
+```mermaid
+sequenceDiagram
+  participant UI as Frontend UI
+  participant PX as Next Proxy
+  participant BE as Backend API
+  participant AI as AI Provider
 
-1. Fetch available rubrics.
-2. Upload briefing PDF (`/api/v1/evaluations/briefings`).
-3. Build payload with:
-   - `rubric_id`
-   - `repo_url`
-   - `briefing_path`
-   - optional `ai_provider` + `ai_model`
-4. Optionally attach `X-API-Key` if user provides BYOK key.
-5. Submit evaluation request.
+  UI->>PX: Upload briefing PDF
+  PX->>BE: POST /evaluations/briefings
+  BE-->>PX: file_path
+  PX-->>UI: file_path
 
-### AI Provider Options in UI
+  UI->>PX: POST /evaluations with rubric/repo/briefing
+  PX->>BE: create evaluation task
+  BE->>AI: criterion evaluation calls
+  BE-->>PX: evaluation result
+  PX-->>UI: result + status
+```
 
-- Default server config (empty provider/model)
-- Gemini
-- Groq
-- OpenAI
+Provider UX behavior:
+- Empty provider/model means backend defaults.
+- Selected provider/model are sent explicitly.
+- Optional user API key is forwarded via X-API-Key header.
 
-Behavior:
-- Empty provider/model => backend defaults.
-- Custom provider/model => frontend includes both values.
-- API key is optional at UI level, backend rules decide final validation.
+---
+
+## What We Implemented in Frontend
+
+### Functional improvements
+
+- Fixed forwarding of custom AI provider/model from the new evaluation form.
+- Fixed optional API key forwarding through X-API-Key header.
+- Aligned provider naming to groq across frontend types and selectors.
+- Preserved server-default behavior when no custom provider/model is selected.
+
+### UX and responsive hardening
+
+- Improved mobile paddings for dashboard and evaluation views.
+- Improved wrapping behavior for markdown text, links, and inline code.
+- Added safer rendering behavior for markdown tables and long content blocks.
+- Improved finding badges and metadata wrapping in narrow viewports.
+
+### Reliability and developer experience
+
+- Hardened route-handler proxy behavior and documentation.
+- Clarified environment-variable behavior and container recreate requirements.
+- Reworked README for faster onboarding and clearer architecture understanding.
 
 ---
 
@@ -230,48 +332,39 @@ frontend/
 
 ## Environment Variables
 
-Start from example file:
+Create file from template:
 
 ```bash
 cp .env.example .env
 ```
 
-### Supported variables
-
-| Variable | Scope | Description | Default |
+| Variable | Scope | Purpose | Default |
 |---|---|---|---|
-| `BACKEND_URL` | Server-side only | Upstream FastAPI URL for proxy route | `http://backend:8000` |
+| BACKEND_URL | Server-side only | Upstream backend target for proxy | http://backend:8000 |
 
-### Security notes
-
-- Do not persist API keys in frontend env files.
-- BYOK keys are entered at runtime by users.
-- Keep sensitive values out of Git commits.
+Security notes:
+- Do not store provider keys in frontend env files.
+- Keep secrets in backend environment or user runtime input.
 
 ---
 
 ## Run and Build
 
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-
-### Development
+### Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Production build
+### Production
 
 ```bash
 npm run build
 npm run start
 ```
 
-### Linting
+### Lint
 
 ```bash
 npm run lint
@@ -281,24 +374,21 @@ npm run lint
 
 ## Docker Setup
 
-### Development image
+### Dev image
 
-- File: `Dockerfile.dev`
-- Uses `node:20-slim`
-- Exposes port `3000`
-- Supports hot reload with mounted volumes
+- Dockerfile.dev
+- Node 20-slim
+- Volume-based hot reload
+- Port 3000
 
-### Production image
+### Prod image
 
-- File: `Dockerfile.prod`
-- Multi-stage build
-- Next.js standalone output
+- Dockerfile.prod
+- Multi-stage standalone build
 - Non-root runtime user
-- Built-in container healthcheck
+- Healthcheck enabled
 
-### Important env reload tip
-
-When environment variables change, recreate containers:
+When env values change, recreate frontend container:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
@@ -306,68 +396,61 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
 
 ---
 
-## Responsive Design Guidelines
+## Responsive Highlights
 
-The frontend is optimized for both desktop and narrow mobile widths.
+### Covered improvements
 
-### What is covered
+- Mobile sidebar top bar and drawer flow.
+- Adaptive spacing for dashboard, list, and detail pages.
+- Wrap-safe rendering for markdown-heavy AI outputs.
+- Better behavior for long lines, evidence snippets, and suggestion blocks.
 
-- Sidebar drawer and mobile top navigation.
-- Adaptive paddings across dashboard/list/detail pages.
-- Wrapped badges and metadata rows.
-- Markdown hardening for:
-  - long links
-  - long code snippets
-  - markdown tables in narrow viewports
-
-### Recommended manual checks
+### Manual QA checklist
 
 - Viewport: 320x824
-- Pages: dashboard, past evaluations list, evaluation detail
-- Validate no clipped text and no horizontal overflow except intentional code/table scroll
+- Routes: /dashboard, /past-evaluations, /past-evaluations/[id]
+- Validate:
+  - no clipped text
+  - no unintended horizontal overflow
+  - markdown blocks remain readable
 
 ---
 
 ## Troubleshooting
 
-### 1) Backend appears unreachable
+### Backend unreachable
 
-Symptoms:
-- Proxy returns 502.
+- Verify backend container status.
+- Verify BACKEND_URL.
+- Check route handler logs for proxy failures.
 
-Checks:
-- Backend container is up.
-- `BACKEND_URL` is correct.
-- Backend route `/api/v1/...` responds.
+### UI changes not visible
 
-### 2) Changes not visible in browser
+1. Hard refresh browser.
+2. Restart frontend container.
+3. Recreate container if env changed.
 
-Actions:
-1. Hard refresh: `Ctrl+Shift+R`
-2. Restart frontend container
-3. Recreate container if env changed
+### AI provider auth errors
 
-### 3) AI evaluation returns provider auth errors
-
-Checks:
-- Provider key validity in backend runtime env
-- Conflicting duplicate env keys
-- Whether a custom `X-API-Key` is overriding server key
+- Validate active backend runtime env values.
+- Check duplicated env keys overriding valid credentials.
+- Confirm whether X-API-Key from UI is overriding server key.
 
 ---
 
 ## Contributing
 
-1. Branch from `development`.
-2. Keep code typed and component-driven.
-3. Reuse existing UI primitives before creating new ones.
-4. Run lint before opening PR.
-5. Include screenshots for UI changes.
+1. Branch from development.
+2. Follow existing component and Tailwind conventions.
+3. Prefer reusing shared UI primitives.
+4. Keep API calls relative to /api/v1.
+5. Run lint before opening PR.
+6. Include screenshots or GIFs for UI changes.
 
 ---
 
 <div align="center">
 
-### Built for maintainability, speed, and a reliable AI-evaluation workflow.
+### Designed for clean UX, resilient integration, and maintainable frontend evolution.
 
 </div>
