@@ -194,27 +194,41 @@ import { Button, Card, CardContent, Badge, Select, Alert } from '@/components/ui
 
 ---
 
-## Visual Demo Blocks (GIF-ready)
+## Visual Documentation Blocks
 
-If you add GIFs in public/images, they will render automatically in this section.
+This README stays fully visual without requiring external GIF assets.
 
-Recommended file names:
-- public/images/dashboard-demo.gif
-- public/images/new-evaluation-flow.gif
-- public/images/rubrics-editor.gif
-- public/images/evaluation-detail-mobile.gif
+### Architecture cards
 
-```md
-![Dashboard Demo](./public/images/dashboard-demo.gif)
-![New Evaluation Flow](./public/images/new-evaluation-flow.gif)
-![Rubrics Editor](./public/images/rubrics-editor.gif)
-![Mobile Evaluation Detail](./public/images/evaluation-detail-mobile.gif)
+| Layer | Description |
+|---|---|
+| Frontend UI | Pages, forms, tables, markdown report rendering |
+| App Shell | Sidebar, mobile drawer, route layout boundaries |
+| Proxy Layer | Next.js route handler for /api/v1/* forwarding |
+| Backend Integration | FastAPI evaluation/rubric APIs |
+| AI Providers | Gemini, Groq, OpenAI execution from backend |
+
+### Feature surface map
+
+```mermaid
+flowchart LR
+  D[Dashboard] --> M[Metrics + Recent Evaluations]
+  N[New Evaluation] --> U[Upload + AI Config + Submit]
+  R[Rubrics] --> C[Criteria + Levels CRUD]
+  P[Past Evaluations] --> F[Filter + Export + Navigate]
+  E[Evaluation Detail] --> S[Summary + Findings + Evidence]
 ```
 
-Tip:
-- Record 8-15 second loops.
-- Keep width around 1200px for good GitHub rendering.
-- Use one GIF per key flow.
+### Component categories at a glance
+
+| Category | Components |
+|---|---|
+| Inputs | Input, Textarea, Select, FileUpload |
+| Feedback | Alert, Badge |
+| Layout | Card, Container, MainLayout, PageHeader, Sidebar |
+| Data display | Table, StatCard, MarkdownRenderer |
+| Interaction | Button, DropdownMenu, Modal, SearchBar |
+| Domain | RubricBuilder |
 
 ---
 
@@ -445,7 +459,7 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
 3. Prefer reusing shared UI primitives.
 4. Keep API calls relative to /api/v1.
 5. Run lint before opening PR.
-6. Include screenshots or GIFs for UI changes.
+6. Include screenshots for UI changes when possible.
 
 ---
 
