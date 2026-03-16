@@ -406,13 +406,6 @@ Checklist manual:
 1. Crear rama desde `development`.
 2. Reutilizar componentes existentes antes de crear nuevos.
 3. Mantener llamadas API relativas a `/api/v1`.
-4. Ejecutar `npm run lint` antes del PR.
 5. Añadir capturas de pantalla cuando haya cambios de UI.
 
 ---
-
-<div align="center">
-
-### README diseñado para que cualquier persona entienda el frontend rápido.
-
-</div>
