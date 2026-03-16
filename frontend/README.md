@@ -21,7 +21,7 @@
 
 ### Navegación Rápida
 
-[![Start](https://img.shields.io/badge/Empieza_aquí-Junior_Friendly-2563EB?style=flat-square)](#-si-eres-junior-empieza-aquí)
+[![Start](https://img.shields.io/badge/Empieza_aquí-Guía_Rápida-2563EB?style=flat-square)](#-guía-rápida-de-lectura)
 [![Arquitectura](https://img.shields.io/badge/Arquitectura-Visual-7C3AED?style=flat-square)](#-arquitectura-explicada-fácil)
 [![Páginas](https://img.shields.io/badge/Páginas-Flujos-0D9488?style=flat-square)](#-páginas-y-qué-hace-cada-una)
 [![Componentes](https://img.shields.io/badge/Componentes-Galería-F59E0B?style=flat-square)](#-galería-de-componentes)
@@ -33,7 +33,7 @@
 
 ---
 
-## 👋 Si eres junior: empieza aquí
+## 👋 Guía rápida de lectura
 
 Si conoces poco el proyecto, sigue este orden:
 
@@ -264,7 +264,7 @@ Comportamiento de IA desde frontend:
 ### Calidad técnica
 
 - Proxy robusto documentado.
-- README reestructurado para onboarding de juniors.
+- README reestructurado para onboarding más claro y rápido.
 - Guía de troubleshooting y operación más clara.
 
 ---
@@ -413,6 +413,6 @@ Checklist manual:
 
 <div align="center">
 
-### README diseñado para que cualquier persona (junior o senior) entienda el frontend rápido.
+### README diseñado para que cualquier persona entienda el frontend rápido.
 
 </div>
