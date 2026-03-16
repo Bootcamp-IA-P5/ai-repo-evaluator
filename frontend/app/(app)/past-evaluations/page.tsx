@@ -335,7 +335,7 @@ export default function PastEvaluationsPage() {
         description="Historial de todas las evaluaciones de repositorios con resultados detallados"
       />
 
-      <div className="flex-1 px-6 py-8 space-y-8 max-w-7xl w-full mx-auto">
+      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-8 space-y-8 max-w-7xl w-full mx-auto">
 
         {/* ── Error banner ─────────────────────────────────────────────── */}
         {error && (
@@ -380,7 +380,7 @@ export default function PastEvaluationsPage() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
           {/* Filter bar */}
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
             {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -423,7 +423,7 @@ export default function PastEvaluationsPage() {
           </div>
 
           {/* Table header row */}
-          <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-3 border-b border-gray-100 flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <p className="text-base font-semibold text-gray-900">Historial de Evaluaciones</p>

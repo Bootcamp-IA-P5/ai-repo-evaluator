@@ -183,7 +183,7 @@ export default function DashboardPage() {
         description="Resumen de la actividad de evaluación y resultados recientes"
       />
 
-      <div className="flex-1 px-6 py-8 space-y-8 max-w-7xl w-full mx-auto">
+      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-8 space-y-8 max-w-7xl w-full mx-auto">
 
         {/* ── Error state ─────────────────────────────────────────────── */}
         {error && (
@@ -211,7 +211,7 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="h-9 w-16 bg-gray-100 rounded animate-pulse" />
               ) : (
-                <p className="text-4xl font-bold text-gray-900">
+                <p className="text-3xl sm:text-4xl font-bold text-gray-900">
                   {totalEvaluations}
                 </p>
               )}
@@ -234,7 +234,7 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="h-9 w-20 bg-gray-100 rounded animate-pulse" />
               ) : (
-                <p className="text-4xl font-bold text-gray-900">
+                <p className="text-3xl sm:text-4xl font-bold text-gray-900">
                   {averageScore !== null ? averageScore : '—'}
                 </p>
               )}
@@ -256,7 +256,7 @@ export default function DashboardPage() {
               {loading ? (
                 <div className="h-9 w-36 bg-gray-100 rounded animate-pulse" />
               ) : (
-                <p className="text-2xl font-bold text-gray-900 leading-tight">
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
                   {mostUsedRubric ?? '—'}
                 </p>
               )}
@@ -267,7 +267,7 @@ export default function DashboardPage() {
         {/* ── Recent Evaluations table ─────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Table header row */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100">
             <div>
               <h2 className="text-base font-semibold text-gray-900">
                 Evaluaciones Recientes
@@ -406,7 +406,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── CTA banner ──────────────────────────────────────────────────── */}
-        <div className="rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <p className="text-white font-semibold text-lg">
               ¿Listo para evaluar un nuevo proyecto?
