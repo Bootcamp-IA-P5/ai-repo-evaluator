@@ -35,13 +35,13 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto max-w-full">
-              <code className="text-sm text-gray-900 font-mono">{children}</code>
-            </pre>
+            <code className="block text-sm text-gray-900 font-mono whitespace-pre-wrap wrap-break-word sm:whitespace-pre">
+              {children}
+            </code>
           );
         },
         pre: ({ children }) => (
-          <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto max-w-full text-gray-900">
+          <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto max-w-full w-full text-gray-900">
             {children}
           </pre>
         ),
