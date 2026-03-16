@@ -76,8 +76,8 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           <em className="italic text-gray-700">{children}</em>
         ),
         table: ({ children }) => (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200">
+          <div className="max-w-full overflow-x-auto">
+            <table className="w-full table-auto border border-gray-200 text-xs sm:text-sm">
               {children}
             </table>
           </div>
@@ -92,12 +92,15 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           <tr className="border-t border-gray-200">{children}</tr>
         ),
         th: ({ children }) => (
-          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 uppercase tracking-wider align-top whitespace-normal wrap-anywhere">
             {children}
           </th>
         ),
         td: ({ children }) => (
-          <td className="px-3 py-2 text-sm text-gray-700">{children}</td>
+          <td className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 align-top whitespace-normal wrap-anywhere">
+            {children}
+          </td>
+        ),
         ),
         }}
       >
