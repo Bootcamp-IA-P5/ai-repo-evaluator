@@ -11,7 +11,7 @@ export interface MarkdownRendererProps {
 
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
   return (
-    <div className={`prose prose-sm max-w-none ${className}`}>
+    <div className={`prose prose-sm max-w-none min-w-0 wrap-anywhere ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -26,22 +26,22 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           <h3 className="text-sm font-semibold text-gray-700 mb-2">{children}</h3>
         ),
         p: ({ children }) => (
-          <p className="text-sm text-gray-700 leading-relaxed mb-3">{children}</p>
+          <p className="text-sm text-gray-700 leading-relaxed mb-3 wrap-anywhere">{children}</p>
         ),
         code: ({ children, className }) => {
           const isInline = !className;
           return isInline ? (
-            <code className="bg-gray-100 text-gray-900 text-sm font-mono px-1.5 py-0.5 rounded border border-gray-300">
+            <code className="bg-gray-100 text-gray-900 text-sm font-mono px-1.5 py-0.5 rounded border border-gray-300 break-all">
               {children}
             </code>
           ) : (
-            <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto">
+            <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto max-w-full">
               <code className="text-sm text-gray-900 font-mono">{children}</code>
             </pre>
           );
         },
         pre: ({ children }) => (
-          <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto text-gray-900">
+          <pre className="bg-gray-100 border border-gray-300 rounded-lg p-3 overflow-x-auto max-w-full text-gray-900">
             {children}
           </pre>
         ),
@@ -52,7 +52,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1 mb-3">{children}</ol>
         ),
         li: ({ children }) => (
-          <li className="text-sm text-gray-700">{children}</li>
+          <li className="text-sm text-gray-700 wrap-anywhere">{children}</li>
         ),
         blockquote: ({ children }) => (
           <blockquote className="border-l-4 border-gray-300 pl-3 text-sm text-gray-600 italic mb-3">
@@ -64,7 +64,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-indigo-600 hover:text-indigo-800 underline"
+            className="text-indigo-600 hover:text-indigo-800 underline break-all"
           >
             {children}
           </a>
