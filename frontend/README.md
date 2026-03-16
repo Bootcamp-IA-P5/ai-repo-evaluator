@@ -1,17 +1,17 @@
 <div align="center">
 
-<img src="./public/evaluAI.webp" alt="EvaluAI" width="84" />
+<img src="./public/evaluAI.webp" alt="EvaluAI" width="88" />
 
 # EvaluAI Frontend
 
-### Modern UI for rubric-based AI repository evaluation
+### Interfaz web para evaluar repositorios con IA y rúbricas personalizadas
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2.3-20232A?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![App Router](https://img.shields.io/badge/Next_App_Router-Enabled-111827?style=for-the-badge)](#architecture-overview)
-[![Proxy Layer](https://img.shields.io/badge/API_Proxy-/api/v1/*-0F766E?style=for-the-badge)](#api--proxy-integration)
+[![App Router](https://img.shields.io/badge/Next_App_Router-Enabled-111827?style=for-the-badge)](#-arquitectura-explicada-fácil)
+[![Proxy API](https://img.shields.io/badge/API_Proxy-/api/v1/*-0F766E?style=for-the-badge)](#-cómo-se-conecta-con-el-backend)
 
 </div>
 
@@ -19,299 +19,257 @@
 
 <div align="center">
 
-### Quick Navigation
+### Navegación Rápida
 
-[![Overview](https://img.shields.io/badge/Overview-Product-2563EB?style=flat-square)](#product-overview)
-[![Architecture](https://img.shields.io/badge/Architecture-Visual_Map-7C3AED?style=flat-square)](#architecture-overview)
-[![Pages](https://img.shields.io/badge/Pages-User_Flows-0D9488?style=flat-square)](#pages--flows)
-[![Components](https://img.shields.io/badge/Components-UI_Gallery-F59E0B?style=flat-square)](#components-gallery)
-[![Integration](https://img.shields.io/badge/Integration-API_and_Proxy-DC2626?style=flat-square)](#api--proxy-integration)
-[![Frontend Work](https://img.shields.io/badge/What_We_Did-Implemented-16A34A?style=flat-square)](#what-we-implemented-in-frontend)
-[![Responsive](https://img.shields.io/badge/Responsive-Mobile_Hardening-0891B2?style=flat-square)](#responsive-highlights)
+[![Start](https://img.shields.io/badge/Empieza_aquí-Junior_Friendly-2563EB?style=flat-square)](#-si-eres-junior-empieza-aquí)
+[![Arquitectura](https://img.shields.io/badge/Arquitectura-Visual-7C3AED?style=flat-square)](#-arquitectura-explicada-fácil)
+[![Páginas](https://img.shields.io/badge/Páginas-Flujos-0D9488?style=flat-square)](#-páginas-y-qué-hace-cada-una)
+[![Componentes](https://img.shields.io/badge/Componentes-Galería-F59E0B?style=flat-square)](#-galería-de-componentes)
+[![Integración](https://img.shields.io/badge/Integración-API-DC2626?style=flat-square)](#-cómo-se-conecta-con-el-backend)
+[![Mejoras](https://img.shields.io/badge/Mejoras-Hechas_en_Frontend-16A34A?style=flat-square)](#-qué-se-ha-hecho-en-este-frontend)
+[![Responsive](https://img.shields.io/badge/Responsive-Mobile_Hardening-0891B2?style=flat-square)](#-responsive-y-ux-móvil)
 
 </div>
 
 ---
 
-## Product Overview
+## 👋 Si eres junior: empieza aquí
 
-EvaluAI Frontend is the interactive layer of the platform.
+Si conoces poco el proyecto, sigue este orden:
 
-It provides:
-- Rubric-driven evaluation creation.
-- Briefing PDF upload and validation.
-- Configurable AI provider/model selection.
-- Evaluation history with filters and CSV export.
-- Detailed report rendering with markdown findings.
-- Rubric and criteria management with level editing.
+1. Lee [Páginas y qué hace cada una](#-páginas-y-qué-hace-cada-una).
+2. Mira [Cómo se conecta con el backend](#-cómo-se-conecta-con-el-backend).
+3. Revisa [Galería de componentes](#-galería-de-componentes).
+4. Ejecuta el proyecto con [Run local](#-run-local-rápido).
+
+### Resumen en una frase
+
+El frontend permite crear evaluaciones de repositorios, enviar datos al backend, y mostrar resultados de IA de forma clara y responsive.
 
 ---
 
-## Architecture Overview
+## 🎯 Qué resuelve este frontend
+
+Esta aplicación web permite:
+
+- Crear evaluaciones nuevas usando una rúbrica.
+- Subir un briefing en PDF.
+- Elegir proveedor/modelo de IA (o usar valores por defecto del servidor).
+- Ver historial de evaluaciones con búsqueda, filtros y exportación CSV.
+- Abrir el detalle de una evaluación y leer hallazgos/sugerencias en markdown.
+- Crear y editar rúbricas, criterios y niveles.
+
+---
+
+## 🧭 Arquitectura explicada fácil
 
 ```mermaid
 flowchart LR
-  U[User Browser] --> N[Next.js 16 App Router]
-  N --> L[App Layout + Sidebar]
-  N --> P[/api/v1 Catch-all Proxy]
-  P --> B[FastAPI Backend]
-  B --> DB[(PostgreSQL)]
-  B --> AI[Gemini | Groq | OpenAI]
+  U[Usuario en navegador] --> FE[Next.js Frontend]
+  FE --> PX[/api/v1 Proxy en Next.js]
+  PX --> BE[FastAPI Backend]
+  BE --> DB[(PostgreSQL)]
+  BE --> AI[Gemini / Groq / OpenAI]
 ```
 
-### Why this architecture works well
+### ¿Por qué así?
 
-- Browser only talks to localhost:3000.
-- Backend calls are proxied server-side through route handlers.
-- Docker-internal hostnames are not exposed to the browser.
-- Redirect handling for 307/308 is controlled and safe.
+- El navegador solo llama a `localhost:3000`.
+- El frontend reenvía las peticiones al backend desde el servidor (proxy).
+- Evita problemas de CORS y evita exponer hostnames internos de Docker.
 
-### Visual module map
-
-```mermaid
-mindmap
-  root((Frontend))
-    App Router
-      dashboard
-      new-evaluation
-      rubrics
-      past-evaluations
-      evaluation-detail
-    UI System
-      cards
-      forms
-      tables
-      markdown renderer
-      alerts and badges
-    Integration
-      route handler proxy
-      fetch-based calls
-      upload service
-    UX
-      desktop sidebar
-      mobile drawer
-      responsive hardening
-```
-
----
-
-## Tech Stack
-
-| Area | Choice | Notes |
-|---|---|---|
-| Framework | Next.js 16.1.6 | App Router + Route Handlers |
-| Runtime UI | React 19.2.3 | Client components for interactive pages |
-| Language | TypeScript 5.x | Typed pages, services, and component props |
-| Styles | Tailwind CSS v4 | Utility-first responsive styling |
-| Markdown | react-markdown + remark-gfm | AI summary and finding rendering |
-| HTTP | fetch (primary), Axios client available | Relative routes through proxy |
-| Charts | Recharts | Metrics visualization |
-| Icons | Lucide React | Consistent iconography |
-
----
-
-## Pages and Flows
-
-### Route table
-
-| Route | Main purpose | File |
-|---|---|---|
-| / | Entry redirect to dashboard | app/page.tsx |
-| /dashboard | KPIs + recent evaluations | app/(app)/dashboard/page.tsx |
-| /new-evaluation | End-to-end creation flow | app/(app)/new-evaluation/page.tsx |
-| /rubrics | Rubric CRUD and level management | app/(app)/rubrics/page.tsx |
-| /past-evaluations | Search/filter/export history | app/(app)/past-evaluations/page.tsx |
-| /past-evaluations/[id] | Full report detail and findings | app/(app)/past-evaluations/[id]/page.tsx |
-| /components-demo | Visual playground | app/components-demo/page.tsx |
-
-### User journey map
+### Mapa visual de módulos
 
 ```mermaid
 flowchart TD
-  A[Open Dashboard] --> B[Create New Evaluation]
-  B --> C[Upload PDF Briefing]
-  C --> D[Select AI config or defaults]
-  D --> E[Submit Evaluation]
-  E --> F[Track in Past Evaluations]
-  F --> G[Open Detail Report]
-  G --> H[Review findings and suggestions]
+  A[Frontend] --> B[App Router]
+  A --> C[UI Components]
+  A --> D[API Proxy]
+  A --> E[Servicios frontend]
+
+  B --> B1[Dashboard]
+  B --> B2[New Evaluation]
+  B --> B3[Rubrics]
+  B --> B4[Past Evaluations]
+  B --> B5[Evaluation Detail]
+
+  C --> C1[Forms]
+  C --> C2[Tables]
+  C --> C3[Cards]
+  C --> C4[MarkdownRenderer]
 ```
 
 ---
 
-## Components Gallery
+## 🧩 Stack tecnológico
 
-### Core UI components
-
-| Component | Purpose | Typical usage |
+| Área | Tecnología | Para qué se usa |
 |---|---|---|
-| Button | Main actions | Save, submit, create |
-| Input / Textarea | Form controls | URL, names, descriptions |
-| Select | Provider/model/rubric selection | Controlled selections |
-| FileUpload | PDF upload | Briefing ingestion |
-| Card | Visual grouping | Dashboard and report sections |
-| Badge | Status and metadata chips | Completed, score, weight |
-| Alert | Inline feedback | Success/error notices |
-| Table | Structured datasets | Evaluations history |
-| StatCard | KPI cards | Dashboard metrics |
-| MarkdownRenderer | AI result rendering | Summary, evidence, suggestions |
-| RubricBuilder | Complex rubric authoring | Criteria and levels |
+| Framework | Next.js 16.1.6 | Rutas, layouts, route handlers |
+| UI | React 19.2.3 | Componentes y estado |
+| Lenguaje | TypeScript 5.x | Tipado y mantenimiento |
+| Estilos | Tailwind v4 | Diseño rápido y responsive |
+| Markdown | react-markdown + remark-gfm | Render de reportes IA |
+| HTTP | fetch (principal), Axios (cliente disponible) | Comunicación API |
+| Gráficas | Recharts | KPIs del dashboard |
+| Iconos | Lucide React | Iconografía consistente |
 
-### Layout primitives
+---
 
-| Component | Responsibility |
+## 📄 Páginas y qué hace cada una
+
+| Ruta | Qué ve el usuario | Qué hace técnicamente | Archivo |
+|---|---|---|---|
+| `/dashboard` | KPIs, rúbrica más usada, evaluaciones recientes | Carga métricas y últimos registros | `app/(app)/dashboard/page.tsx` |
+| `/new-evaluation` | Formulario de nueva evaluación | Sube PDF, arma payload, envía POST | `app/(app)/new-evaluation/page.tsx` |
+| `/rubrics` | Lista/edición de rúbricas | CRUD de rúbricas, criterios y niveles | `app/(app)/rubrics/page.tsx` |
+| `/past-evaluations` | Historial con filtros | Busca, filtra, exporta CSV, polling | `app/(app)/past-evaluations/page.tsx` |
+| `/past-evaluations/[id]` | Informe detallado | Obtiene evaluación + rúbrica y renderiza markdown | `app/(app)/past-evaluations/[id]/page.tsx` |
+
+### Flujo del usuario
+
+```mermaid
+flowchart TD
+  A[Dashboard] --> B[Nueva Evaluación]
+  B --> C[Subir PDF]
+  C --> D[Elegir IA o default]
+  D --> E[Enviar evaluación]
+  E --> F[Historial]
+  F --> G[Detalle de evaluación]
+```
+
+---
+
+## 🧱 Galería de componentes
+
+### Componentes UI principales
+
+| Componente | Uso principal |
 |---|---|
-| MainLayout | Sidebar + content shell |
-| Sidebar | Desktop nav + mobile drawer |
-| PageHeader | Reusable title/subtitle/action section |
-| Container | Max-width and spacing control |
+| `Button` | Acciones principales y secundarias |
+| `Input` / `Textarea` | Inputs de formularios |
+| `Select` | Selección de proveedor/modelo/rúbrica |
+| `FileUpload` | Subida de briefing PDF |
+| `Card` | Bloques visuales del dashboard/report |
+| `Badge` | Estados y etiquetas de metadatos |
+| `Alert` | Mensajes de éxito/error |
+| `Table` | Historial y listas de datos |
+| `StatCard` | Tarjetas KPI |
+| `MarkdownRenderer` | Render de resumen/hallazgos IA |
+| `RubricBuilder` | Editor de rúbricas |
 
-### Component examples
+### Layout y navegación
+
+| Componente | Función |
+|---|---|
+| `MainLayout` | Shell principal de la app |
+| `Sidebar` | Menú lateral (desktop + drawer móvil) |
+| `PageHeader` | Cabecera estándar de cada vista |
+| `Container` | Control de ancho y espaciado |
+
+### Ejemplo rápido (realista)
 
 ```tsx
-import { Button, Card, CardContent, Badge, Select, Alert } from '@/components/ui';
+import { Card, CardContent, Badge, Button, Alert } from '@/components/ui';
 
 <Card className="rounded-xl border border-gray-200">
   <CardContent className="space-y-4">
     <div className="flex items-center justify-between">
-      <h3 className="text-lg font-semibold">Evaluation Status</h3>
-      <Badge variant="success">Completed</Badge>
+      <h3 className="text-lg font-semibold">Estado de evaluación</h3>
+      <Badge variant="success">Completado</Badge>
     </div>
 
-    <Select
-      label="AI Provider"
-      options={[{ value: 'groq', label: 'Groq' }]}
-      value="groq"
-      onChange={() => {}}
-      fullWidth
-    />
-
-    <Button variant="primary">Run Evaluation</Button>
-    <Alert variant="success" message="Evaluation started successfully" />
+    <Button variant="primary">Ver informe</Button>
+    <Alert variant="success" message="Evaluación cargada correctamente" />
   </CardContent>
 </Card>
 ```
 
 ---
 
-## Visual Documentation Blocks
+## 🔌 Cómo se conecta con el backend
 
-This README stays fully visual without requiring external GIF assets.
+### Idea clave
 
-### Architecture cards
+Las páginas del frontend llaman rutas relativas, por ejemplo:
 
-| Layer | Description |
-|---|---|
-| Frontend UI | Pages, forms, tables, markdown report rendering |
-| App Shell | Sidebar, mobile drawer, route layout boundaries |
-| Proxy Layer | Next.js route handler for /api/v1/* forwarding |
-| Backend Integration | FastAPI evaluation/rubric APIs |
-| AI Providers | Gemini, Groq, OpenAI execution from backend |
+- `/api/v1/evaluations/`
+- `/api/v1/rubrics/`
+- `/api/v1/evaluations/briefings`
 
-### Feature surface map
+No llaman directamente `http://backend:8000` desde el navegador.
 
-```mermaid
-flowchart LR
-  D[Dashboard] --> M[Metrics + Recent Evaluations]
-  N[New Evaluation] --> U[Upload + AI Config + Submit]
-  R[Rubrics] --> C[Criteria + Levels CRUD]
-  P[Past Evaluations] --> F[Filter + Export + Navigate]
-  E[Evaluation Detail] --> S[Summary + Findings + Evidence]
-```
+### ¿Quién hace de puente?
 
-### Component categories at a glance
+- Archivo: `app/api/v1/[...path]/route.ts`
+- Este route handler actúa como proxy server-side.
 
-| Category | Components |
-|---|---|
-| Inputs | Input, Textarea, Select, FileUpload |
-| Feedback | Alert, Badge |
-| Layout | Card, Container, MainLayout, PageHeader, Sidebar |
-| Data display | Table, StatCard, MarkdownRenderer |
-| Interaction | Button, DropdownMenu, Modal, SearchBar |
-| Domain | RubricBuilder |
+### Ventajas
+
+- Menos problemas de CORS.
+- Mayor seguridad en cabeceras y redirects.
+- Misma URL para frontend en local y Docker.
+
+### fetch o axios
+
+- Hoy se usa principalmente `fetch` en páginas.
+- Existe `lib/api/client.ts` con Axios para futuras estandarizaciones.
 
 ---
 
-## API / Proxy Integration
-
-### Request strategy
-
-All user-facing pages call relative routes:
-- /api/v1/evaluations/
-- /api/v1/rubrics/
-- /api/v1/evaluations/briefings
-
-### Proxy layer
-
-Implemented in app/api/v1/[...path]/route.ts.
-
-It provides:
-- Server-side forwarding to BACKEND_URL.
-- Controlled redirect handling (307/308).
-- Body-safe replay for redirects.
-- Hop-by-hop header filtering.
-- Safer upstream behavior for Docker development.
-
-### HTTP client status
-
-- Current page implementations mostly use fetch.
-- Axios client exists in lib/api/client.ts for future standardized usage.
-
----
-
-## Data and AI Flow
+## 🤖 Flujo de datos de evaluación (simple)
 
 ```mermaid
 sequenceDiagram
-  participant UI as Frontend UI
-  participant PX as Next Proxy
-  participant BE as Backend API
-  participant AI as AI Provider
+  participant UI as Frontend
+  participant PX as Proxy Next
+  participant BE as Backend
+  participant AI as Provider
 
-  UI->>PX: Upload briefing PDF
-  PX->>BE: POST /evaluations/briefings
+  UI->>PX: POST briefing PDF
+  PX->>BE: /evaluations/briefings
   BE-->>PX: file_path
   PX-->>UI: file_path
 
-  UI->>PX: POST /evaluations with rubric/repo/briefing
-  PX->>BE: create evaluation task
-  BE->>AI: criterion evaluation calls
-  BE-->>PX: evaluation result
-  PX-->>UI: result + status
+  UI->>PX: POST evaluación (rúbrica + repo + briefing)
+  PX->>BE: crear evaluación
+  BE->>AI: llamadas de evaluación por criterio
+  BE-->>PX: resultado
+  PX-->>UI: estado y score
 ```
 
-Provider UX behavior:
-- Empty provider/model means backend defaults.
-- Selected provider/model are sent explicitly.
-- Optional user API key is forwarded via X-API-Key header.
+Comportamiento de IA desde frontend:
+- Si no eliges proveedor/modelo, usa defaults del backend.
+- Si eliges proveedor/modelo, se envían explícitamente.
+- Si el usuario añade API key, se manda vía `X-API-Key`.
 
 ---
 
-## What We Implemented in Frontend
+## ✅ Qué se ha hecho en este frontend
 
-### Functional improvements
+### Funcional
 
-- Fixed forwarding of custom AI provider/model from the new evaluation form.
-- Fixed optional API key forwarding through X-API-Key header.
-- Aligned provider naming to groq across frontend types and selectors.
-- Preserved server-default behavior when no custom provider/model is selected.
+- Se corrigió el envío de `ai_provider` y `ai_model` desde nueva evaluación.
+- Se corrigió el envío opcional de `X-API-Key`.
+- Se alineó el proveedor a `groq` en tipos y UI.
+- Se mantuvo el comportamiento de defaults del servidor cuando procede.
 
-### UX and responsive hardening
+### UX y responsive
 
-- Improved mobile paddings for dashboard and evaluation views.
-- Improved wrapping behavior for markdown text, links, and inline code.
-- Added safer rendering behavior for markdown tables and long content blocks.
-- Improved finding badges and metadata wrapping in narrow viewports.
+- Mejoras de spacing mobile en dashboard y evaluaciones.
+- Mejor wrapping de texto/links/código en markdown.
+- Mejor comportamiento de tablas y contenido largo en móvil.
+- Ajustes en badges/metadatos para no romper layout en 320px.
 
-### Reliability and developer experience
+### Calidad técnica
 
-- Hardened route-handler proxy behavior and documentation.
-- Clarified environment-variable behavior and container recreate requirements.
-- Reworked README for faster onboarding and clearer architecture understanding.
+- Proxy robusto documentado.
+- README reestructurado para onboarding de juniors.
+- Guía de troubleshooting y operación más clara.
 
 ---
 
-## Project Structure
+## 📁 Estructura del proyecto
 
 ```text
 frontend/
@@ -344,65 +302,61 @@ frontend/
 
 ---
 
-## Environment Variables
+## ⚙️ Configuración de entorno
 
-Create file from template:
+Crea tu archivo de entorno:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Scope | Purpose | Default |
+| Variable | Dónde aplica | Qué hace | Valor por defecto |
 |---|---|---|---|
-| BACKEND_URL | Server-side only | Upstream backend target for proxy | http://backend:8000 |
+| `BACKEND_URL` | Solo server-side | URL objetivo del proxy | `http://backend:8000` |
 
-Security notes:
-- Do not store provider keys in frontend env files.
-- Keep secrets in backend environment or user runtime input.
+Buenas prácticas:
+- No guardar API keys sensibles en frontend.
+- Mantener secretos en backend o en entrada de usuario runtime.
 
 ---
 
-## Run and Build
-
-### Local development
+## 🚀 Run local rápido
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Production
+Abre:
+- `http://localhost:3000`
+
+Otros comandos:
 
 ```bash
 npm run build
 npm run start
-```
-
-### Lint
-
-```bash
 npm run lint
 ```
 
 ---
 
-## Docker Setup
+## 🐳 Docker (dev y prod)
 
-### Dev image
+### Desarrollo
 
-- Dockerfile.dev
+- `Dockerfile.dev`
 - Node 20-slim
-- Volume-based hot reload
-- Port 3000
+- Hot reload con volúmenes
+- Puerto 3000
 
-### Prod image
+### Producción
 
-- Dockerfile.prod
-- Multi-stage standalone build
-- Non-root runtime user
-- Healthcheck enabled
+- `Dockerfile.prod`
+- Build multi-stage standalone
+- Usuario no-root
+- Healthcheck
 
-When env values change, recreate frontend container:
+Si cambias variables de entorno, recrea contenedor:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
@@ -410,61 +364,55 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
 
 ---
 
-## Responsive Highlights
+## 📱 Responsive y UX móvil
 
-### Covered improvements
+Mejoras aplicadas:
+- Drawer móvil en navegación.
+- Paddings adaptativos en vistas críticas.
+- Render markdown endurecido para contenido largo.
+- Mejor legibilidad en evaluación detalle (320px).
 
-- Mobile sidebar top bar and drawer flow.
-- Adaptive spacing for dashboard, list, and detail pages.
-- Wrap-safe rendering for markdown-heavy AI outputs.
-- Better behavior for long lines, evidence snippets, and suggestion blocks.
-
-### Manual QA checklist
-
-- Viewport: 320x824
-- Routes: /dashboard, /past-evaluations, /past-evaluations/[id]
-- Validate:
-  - no clipped text
-  - no unintended horizontal overflow
-  - markdown blocks remain readable
+Checklist manual:
+- Viewport 320x824
+- Revisar `/dashboard`, `/past-evaluations`, `/past-evaluations/[id]`
+- Confirmar sin clipping horizontal inesperado
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
-### Backend unreachable
+### Backend no responde
 
-- Verify backend container status.
-- Verify BACKEND_URL.
-- Check route handler logs for proxy failures.
+- Revisa contenedor backend.
+- Revisa `BACKEND_URL`.
+- Revisa logs del proxy route handler.
 
-### UI changes not visible
+### No veo cambios en frontend
 
-1. Hard refresh browser.
-2. Restart frontend container.
-3. Recreate container if env changed.
+1. Hard refresh (`Ctrl+Shift+R`).
+2. Reinicia frontend.
+3. Si cambiaste env, usa recreate (`--force-recreate`).
 
-### AI provider auth errors
+### Error de autenticación con proveedor IA
 
-- Validate active backend runtime env values.
-- Check duplicated env keys overriding valid credentials.
-- Confirm whether X-API-Key from UI is overriding server key.
+- Verifica variables activas dentro del contenedor backend.
+- Revisa claves duplicadas en `.env`.
+- Comprueba si `X-API-Key` está sobreescribiendo key de servidor.
 
 ---
 
-## Contributing
+## 🤝 Contribución
 
-1. Branch from development.
-2. Follow existing component and Tailwind conventions.
-3. Prefer reusing shared UI primitives.
-4. Keep API calls relative to /api/v1.
-5. Run lint before opening PR.
-6. Include screenshots for UI changes when possible.
+1. Crear rama desde `development`.
+2. Reutilizar componentes existentes antes de crear nuevos.
+3. Mantener llamadas API relativas a `/api/v1`.
+4. Ejecutar `npm run lint` antes del PR.
+5. Añadir capturas de pantalla cuando haya cambios de UI.
 
 ---
 
 <div align="center">
 
-### Designed for clean UX, resilient integration, and maintainable frontend evolution.
+### README diseñado para que cualquier persona (junior o senior) entienda el frontend rápido.
 
 </div>
