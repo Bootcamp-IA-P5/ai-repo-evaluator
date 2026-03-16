@@ -254,6 +254,7 @@ def create_evaluation(
     """
     # Merge header API key with request body if AI configuration is provided
     if evaluation_request.ai_provider and evaluation_request.ai_model:
+        # Use header API key if provided, otherwise use body API key
         evaluation_request.ai_api_key = api_key or evaluation_request.ai_api_key
     
     return evaluation_service.create(
