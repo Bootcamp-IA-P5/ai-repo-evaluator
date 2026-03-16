@@ -1,249 +1,360 @@
-# AI Repo Evaluator - Frontend
+# EvaluAI Frontend
 
-Frontend for the AI-powered repository evaluation assistant for the AI bootcamp.
+Frontend application for EvaluAI, the AI-powered repository evaluation platform.
 
-## 🚀 Technologies
+This document is intentionally detailed so any developer can onboard quickly, understand the architecture, and contribute safely.
 
-- **[Next.js 16.1.6](https://nextjs.org/)** - React framework with App Router
-- **[TypeScript](https://www.typescriptlang.org/)** - Typed JavaScript
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[Axios](https://axios-http.com/)** - HTTP client
-- **[Lucide React](https://lucide.dev/)** - Icons
-- **[Recharts](https://recharts.org/)** - Charts
+---
 
-## 📁 Project Structure
+## 1. Tech Stack
 
+| Area | Technology | Version | Purpose |
+|---|---|---|---|
+| Framework | Next.js (App Router) | 16.1.6 | Routing, SSR/CSR, API Route Handlers |
+| UI | React | 19.2.3 | Component-based UI |
+| Language | TypeScript | 5.x | Type safety and maintainability |
+| Styling | Tailwind CSS | 4.x | Utility-first styling |
+| Markdown | react-markdown + remark-gfm | 10.x / 4.x | Rendering AI summaries and findings |
+| HTTP | Fetch + Axios client | Native / 1.13.x | API requests through proxy |
+| Charts | Recharts | 3.7.0 | Dashboard visual metrics |
+| Icons | Lucide React | 0.575.0 | Consistent icon system |
+
+---
+
+## 2. Frontend Architecture (High Level)
+
+```mermaid
+flowchart LR
+  U[Browser] --> N[Next.js App Router]
+  N --> P[/api/v1/* Route Handler Proxy/]
+  P --> B[FastAPI Backend]
+
+  N --> V[Pages and UI Components]
+  V --> C[Shared Component Library]
+  V --> S[Frontend Services]
 ```
+
+Key idea:
+- The browser talks to `localhost:3000`.
+- The frontend proxies backend requests server-side via `app/api/v1/[...path]/route.ts`.
+- This avoids exposing internal Docker hostnames and reduces CORS complexity.
+
+---
+
+## 3. Route Map (Pages)
+
+| Route | File | Purpose |
+|---|---|---|
+| `/` | `app/page.tsx` | Redirects to dashboard |
+| `/dashboard` | `app/(app)/dashboard/page.tsx` | Metrics, most-used rubric, recent evaluations |
+| `/new-evaluation` | `app/(app)/new-evaluation/page.tsx` | Create evaluation, upload briefing PDF, choose AI provider/model |
+| `/rubrics` | `app/(app)/rubrics/page.tsx` | Manage rubric templates, criteria, levels |
+| `/past-evaluations` | `app/(app)/past-evaluations/page.tsx` | Search/filter/export evaluations history |
+| `/past-evaluations/[id]` | `app/(app)/past-evaluations/[id]/page.tsx` | Detailed evaluation report and findings |
+| `/components-demo` | `app/components-demo/page.tsx` | Internal component showcase |
+
+---
+
+## 4. Layout System
+
+| Layer | File | Responsibility |
+|---|---|---|
+| Root layout | `app/layout.tsx` | Global fonts, base metadata, hydration warning handling |
+| App shell layout | `app/(app)/layout.tsx` | Sidebar navigation and mobile drawer |
+| Layout primitives | `components/layout/Container.tsx` | `MainLayout`, `PageHeader`, `Container` |
+| Sidebar | `components/layout/Sidebar.tsx` | Desktop sidebar + mobile overlay drawer |
+
+Mobile behavior highlights:
+- Hamburger top bar on small screens.
+- Sidebar drawer with backdrop and close controls.
+- Responsive paddings and wrapped metadata in detail/list pages.
+
+---
+
+## 5. API Integration Strategy
+
+### 5.1 Proxy Route Handler
+
+File: `app/api/v1/[...path]/route.ts`
+
+What it does:
+- Proxies all `/api/v1/*` requests to `BACKEND_URL`.
+- Follows `307/308` redirects manually and safely.
+- Preserves method/body when redirecting.
+- Filters hop-by-hop headers.
+- Rejects cross-origin redirect hops to avoid SSRF-style abuse.
+
+Why this exists:
+- Turbopack can be unreliable with rewrite-based proxying in dev.
+- Route Handler proxy keeps network flow stable and Docker-safe.
+
+### 5.2 Request Pattern in Pages
+
+Most pages use relative URLs:
+
+```ts
+fetch('/api/v1/evaluations/')
+fetch('/api/v1/rubrics/')
+```
+
+This ensures all traffic goes through the proxy.
+
+### 5.3 File Upload Flow
+
+File: `lib/services/file-upload.ts`
+
+Flow:
+1. Validate file extension and size client-side.
+2. POST multipart file to `/api/v1/evaluations/briefings`.
+3. Receive `file_path` from backend.
+4. Submit evaluation payload with that `briefing_path`.
+
+---
+
+## 6. AI Provider Configuration (Frontend Behavior)
+
+Configured in `app/(app)/new-evaluation/page.tsx`.
+
+Supported providers in UI:
+- `gemini`
+- `groq`
+- `openai`
+
+Behavior:
+- If provider/model are empty, frontend sends no custom AI config and backend defaults are used.
+- If provider/model are selected, they are included in request body.
+- If user provides API key, frontend sends it as `X-API-Key` header.
+
+Important note:
+- Backend validation rules determine whether a custom provider/model requires explicit API key.
+
+---
+
+## 7. Component Library Overview
+
+### 7.1 UI Components (`components/ui`)
+
+| Component | Role |
+|---|---|
+| `Alert.tsx` | Success/error dismissible banners |
+| `Badge.tsx` | Status labels and semantic pills |
+| `Button.tsx` | Button variants, sizes, loading states |
+| `Card.tsx` | Generic card containers and sections |
+| `DropdownMenu.tsx` | Context/action menus |
+| `FileUpload.tsx` | Upload input with drag/drop UX |
+| `Input.tsx` | Text input with helper/error states |
+| `MarkdownRenderer.tsx` | Safe markdown rendering for summaries/findings |
+| `Modal.tsx` | Generic modal dialogs |
+| `RubricBuilder.tsx` | Rubric form builder (criteria + levels) |
+| `SearchBar.tsx` | Search UX with clean interaction |
+| `Select.tsx` | Controlled select component |
+| `StatCard.tsx` | Dashboard KPI cards |
+| `Table.tsx` | Reusable table primitives |
+| `Textarea.tsx` | Multiline input component |
+
+Additional docs:
+- `components/UI_COMPONENTS.md`
+
+### 7.2 Layout Components (`components/layout`)
+
+| Component | Role |
+|---|---|
+| `Container.tsx` | Width constraints and page primitives |
+| `Sidebar.tsx` | Primary navigation (desktop + mobile drawer) |
+| `index.ts` | Layout exports |
+
+---
+
+## 8. Project Structure
+
+```text
 frontend/
-├── app/                     # Next.js App Router
-│   ├── layout.tsx          # Main layout
-│   ├── page.tsx            # Home page
-│   ├── components-demo/    # UI components showcase
-│   └── globals.css         # Global styles
-├── components/             # React components
-│   ├── ui/                # Reusable UI components (Button, Input, Select, etc.)
-│   ├── layout/            # Layout components (Sidebar, Container, etc.)
-│   └── forms/             # Form components
-├── lib/                   # Utilities and configurations
-│   ├── api/              # API client and endpoints
-│   └── utils/            # Utility functions
-├── types/                # Shared TypeScript types
-├── hooks/                # Custom React Hooks
-├── public/               # Static files
-└── .env.local           # Environment variables (do not commit)
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── (app)/
+│   │   ├── layout.tsx
+│   │   ├── dashboard/page.tsx
+│   │   ├── new-evaluation/page.tsx
+│   │   ├── past-evaluations/page.tsx
+│   │   ├── past-evaluations/[id]/page.tsx
+│   │   └── rubrics/page.tsx
+│   ├── api/v1/[...path]/route.ts
+│   └── components-demo/page.tsx
+├── components/
+│   ├── layout/
+│   └── ui/
+├── lib/
+│   ├── api/client.ts
+│   ├── services/file-upload.ts
+│   └── utils/
+├── hooks/
+├── public/
+├── types/
+├── next.config.ts
+├── package.json
+└── README.md
 ```
 
-## 🎨 UI Components Library
+---
 
-A comprehensive set of reusable UI components built with React, TypeScript, and Tailwind CSS.
+## 9. Environment Variables
 
-### Available Components
-
-#### Basic Components
-- **Button** - Multiple variants (primary, secondary, outline, ghost, danger), sizes, and loading states
-- **Input** - Text input with validation, icons, and helper text
-- **Select** - Custom dropdown with Classroom-style design and search functionality
-- **Badge** - Status indicators with color variants and optional dot
-- **Card** - Flexible container with header, content, and footer sections
-- **FileUpload** - Drag-and-drop file upload with validation
-- **Table** - Composable table with header, body, and footer
-- **SearchBar** - Search input with debouncing and clear functionality
-- **StatCard** - Metric display card with optional trend indicators
-
-#### Layout Components
-- **Sidebar** - Navigation sidebar with active state highlighting
-- **Container** - Content container with max-width control
-- **PageHeader** - Page title and description component
-- **MainLayout** - Main application layout structure
-
-### Usage Example
-
-```tsx
-import { Button, Input, Select, Card, Badge } from '@/components/ui';
-import { Sidebar, Container, PageHeader } from '@/components/layout';
-import { Plus } from 'lucide-react';
-
-// Button with icon
-<Button variant="primary" leftIcon={<Plus />}>
-  Create New
-</Button>
-
-// Input with validation
-<Input
-  label="Repository URL"
-  placeholder="https://github.com/user/repo"
-  error="Invalid URL"
-  fullWidth
-/>
-
-// Custom Select with search
-<Select
-  label="Select Rubric"
-  options={rubricOptions}
-  value={selected}
-  onChange={setSelected}
-  fullWidth
-/>
-```
-
-For complete documentation and examples, see:
-- **[UI Components Documentation](./components/UI_COMPONENTS.md)** - Comprehensive component guide
-- **[Components Demo](/components-demo)** - Live interactive showcase (run dev server)
-
-## 🛠️ Installation
-
-### Prerequisites
-
-- Node.js 20.x LTS
-- npm 10.x
-
-### Steps
-
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-   Edit `.env.local` with your values:
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   ```
-
-3. **Run in development mode**
-   ```bash
-   npm run dev
-   ```
-   The application will be available at [http://localhost:3000](http://localhost:3000)
-
-## 📜 Available Scripts
+Use `.env.example` as base.
 
 ```bash
-npm run dev      # Run development server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run linter
+cp .env.example .env
 ```
 
-## 🔌 Backend Integration
+Variables:
 
-The frontend communicates with the FastAPI backend via Axios.
+| Variable | Scope | Default | Description |
+|---|---|---|---|
+| `BACKEND_URL` | Server-side | `http://backend:8000` | Backend base URL used only by route handler proxy |
 
-- **Base URL**: Configured in `NEXT_PUBLIC_API_URL`
-- **API Client**: `lib/api/client.ts`
+Security notes:
+- Do not put provider API keys in frontend env files.
+- Provider keys should come from runtime input (BYOK) or backend env.
+- Keep `.env` files out of commits when they contain secrets.
 
-### Main endpoints (example)
+---
 
-```typescript
-import apiClient from '@/lib/api/client';
+## 10. Development
 
-// Get rubrics
-const rubrics = await apiClient.get('/api/rubrics');
+### 10.1 Prerequisites
 
-// Evaluate repository
-const evaluation = await apiClient.post('/api/evaluate', {
-  rubricId,
-  repositoryUrl,
-  // ...
-});
-```
+- Node.js 20+
+- npm 10+
 
-## 🎨 Styling with Tailwind CSS
-
-Use Tailwind classes directly in components:
-
-```tsx
-<div className="bg-blue-500 text-white p-4 rounded-lg">
-  Hello world!
-</div>
-```
-
-For conditional styles, use the `cn` utility:
-
-```tsx
-import { cn } from '@/lib/utils/cn';
-
-<div className={cn(
-  'base-styles',
-  isActive && 'active-styles',
-  className
-)}>
-  Content
-</div>
-```
-
-## 📊 Using Recharts
-
-Simple chart example:
-
-```tsx
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-
-const data = [
-  { name: 'Criteria 1', score: 80 },
-  { name: 'Criteria 2', score: 95 },
-];
-
-<BarChart width={500} height={300} data={data}>
-  <CartesianGrid strokeDasharray="3 3" />
-  <XAxis dataKey="name" />
-  <YAxis />
-  <Tooltip />
-  <Bar dataKey="score" fill="#8884d8" />
-</BarChart>
-```
-
-## 🔧 Development
-
-### Create a new component
+### 10.2 Local Run
 
 ```bash
-# UI Component
-touch components/ui/Button.tsx
-
-# Form Component
-touch components/forms/EvaluationForm.tsx
+npm install
+npm run dev
 ```
 
-### Add TypeScript types
+App URL:
+- `http://localhost:3000`
 
-Edit `types/index.ts` to add new shared types.
+### 10.3 Available Scripts
 
-### Custom Hooks
-
-Create custom hooks in the `hooks/` folder:
-
-```typescript
-// hooks/useEvaluation.ts
-export function useEvaluation() {
-  // Your logic here
-}
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
 ```
 
-## 🐳 Docker
+---
 
-The Dockerfile will be created and managed by the backend team.
+## 11. Docker Workflow
 
-Expected configuration:
-- **Port**: 3000
-- **Base image**: `node:20-slim`
+### 11.1 Development image
 
-## 📝 Notes
+File: `Dockerfile.dev`
 
-- Environment variables must have the `NEXT_PUBLIC_` prefix to be available in the client
-- Do not commit `.env.local` to the repository (already in `.gitignore`)
-- Use TypeScript for all new components
+- Base: `node:20-slim`
+- Uses volume mounts for hot reload in Compose
+- Exposes port `3000`
 
-## 🤝 Contributing
+### 11.2 Production image
 
-1. Create branch from `develop`
-2. Make changes
-3. Commit following conventional commits
-4. Create pull request
+File: `Dockerfile.prod`
 
-## 📧 Contact
+- Multi-stage build
+- `next build` + standalone output
+- Non-root runtime user
+- Healthcheck included
 
-**Project Team**: ai-repo-evaluator@company.com
+Important operational note:
+- If env vars change in Compose `env_file`, use container recreate (not only restart):
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
+```
+
+---
+
+## 12. Responsive Design Notes
+
+Current responsive strategy includes:
+- Mobile drawer navigation (`Sidebar` + `MainLayout`).
+- Adaptive paddings across dashboard/history/detail pages.
+- Wrapped metadata badges and compact card spacing on small screens.
+- `MarkdownRenderer` tuned for long content, code blocks, links, and table cells.
+
+Testing checklist for 320px width:
+- Dashboard cards and recent table header spacing.
+- Past evaluations filters and row metadata wrapping.
+- Evaluation detail findings, suggestions, and markdown blocks.
+
+---
+
+## 13. Code Quality and Conventions
+
+- TypeScript-first components and interfaces.
+- Strongly-typed API response handling in pages.
+- Keep UI logic close to pages, extract reusable logic to `lib/services`.
+- Prefer relative API paths (`/api/v1/...`) to guarantee proxy usage.
+- Keep component styles consistent with existing design language.
+
+Recommended commit style:
+- Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`).
+
+---
+
+## 14. Troubleshooting
+
+### 14.1 Proxy cannot reach backend
+
+Symptoms:
+- `502` from frontend API route
+
+Checks:
+- Backend container running
+- Correct `BACKEND_URL`
+- Backend route availability (`/api/v1/...`)
+
+### 14.2 Frontend changes not reflected
+
+Actions:
+1. Hard refresh browser (`Ctrl+Shift+R`)
+2. Restart frontend container
+3. If env changed, recreate container with `--force-recreate`
+
+### 14.3 Markdown overflow on mobile
+
+Check:
+- `components/ui/MarkdownRenderer.tsx`
+- Ensure wrapper and table/code rules still include responsive wrapping behavior
+
+---
+
+## 15. Contribution Guide
+
+1. Create a feature branch from `development`.
+2. Implement changes with TypeScript + existing UI conventions.
+3. Run `npm run lint`.
+4. Open PR with clear scope, screenshots (if UI), and testing notes.
+
+---
+
+## 16. Quick Reference
+
+| Need | Where to look |
+|---|---|
+| Navigation shell | `app/(app)/layout.tsx`, `components/layout/Sidebar.tsx` |
+| API proxy behavior | `app/api/v1/[...path]/route.ts` |
+| New evaluation flow | `app/(app)/new-evaluation/page.tsx` |
+| Markdown rendering | `components/ui/MarkdownRenderer.tsx` |
+| Shared upload logic | `lib/services/file-upload.ts` |
+| Next config and redirects | `next.config.ts` |
+
+---
+
+If you are new to this codebase, start with:
+1. `app/(app)/layout.tsx`
+2. `app/(app)/new-evaluation/page.tsx`
+3. `app/api/v1/[...path]/route.ts`
+
+That sequence gives you the fastest understanding of structure, business flow, and infrastructure.
