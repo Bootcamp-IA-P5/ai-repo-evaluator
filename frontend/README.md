@@ -66,7 +66,7 @@ Esta aplicación web permite:
 ```mermaid
 flowchart LR
   U[Usuario en navegador] --> FE[Next.js Frontend]
-  FE --> PX[/api/v1 Proxy en Next.js]
+  FE --> PX[API v1 Proxy en Next.js]
   PX --> BE[FastAPI Backend]
   BE --> DB[(PostgreSQL)]
   BE --> AI[Gemini / Groq / OpenAI]
