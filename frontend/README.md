@@ -1,171 +1,201 @@
+<div align="center">
+
 # EvaluAI Frontend
 
-Frontend application for EvaluAI, the AI-powered repository evaluation platform.
+### AI-powered repository evaluation interface with rubric-driven workflows
 
-This document is intentionally detailed so any developer can onboard quickly, understand the architecture, and contribute safely.
+![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19.2.3-20232A?style=for-the-badge&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss)
+![Status](https://img.shields.io/badge/Status-Active-success?style=for-the-badge)
 
----
-
-## 1. Tech Stack
-
-| Area | Technology | Version | Purpose |
-|---|---|---|---|
-| Framework | Next.js (App Router) | 16.1.6 | Routing, SSR/CSR, API Route Handlers |
-| UI | React | 19.2.3 | Component-based UI |
-| Language | TypeScript | 5.x | Type safety and maintainability |
-| Styling | Tailwind CSS | 4.x | Utility-first styling |
-| Markdown | react-markdown + remark-gfm | 10.x / 4.x | Rendering AI summaries and findings |
-| HTTP | Fetch + Axios client | Native / 1.13.x | API requests through proxy |
-| Charts | Recharts | 3.7.0 | Dashboard visual metrics |
-| Icons | Lucide React | 0.575.0 | Consistent icon system |
+</div>
 
 ---
 
-## 2. Frontend Architecture (High Level)
+## Table of Contents
+
+- [Product Overview](#product-overview)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Tech Stack](#tech-stack)
+- [Pages and User Flows](#pages-and-user-flows)
+- [UI System and Components](#ui-system-and-components)
+- [API Integration and Proxy Strategy](#api-integration-and-proxy-strategy)
+- [Data and AI Configuration Flow](#data-and-ai-configuration-flow)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [Run and Build](#run-and-build)
+- [Docker Setup](#docker-setup)
+- [Responsive Design Guidelines](#responsive-design-guidelines)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+---
+
+## Product Overview
+
+EvaluAI Frontend is the presentation and interaction layer for the repository evaluation platform.
+
+It enables users to:
+- Create evaluations from GitHub repositories.
+- Upload briefing documents (PDF).
+- Select AI provider/model or use server defaults.
+- Review historical evaluations with filtering and CSV export.
+- Inspect detailed AI findings and markdown-based summaries.
+- Manage rubrics, criteria, and scoring levels.
+
+---
+
+## Architecture at a Glance
 
 ```mermaid
 flowchart LR
-  U[Browser] --> N[Next.js App Router]
-  N --> P[/api/v1/* Route Handler Proxy/]
+  U[User Browser] --> N[Next.js App Router]
+  N --> UI[Pages + Components]
+  N --> P[/api/v1 Proxy Route Handler]
   P --> B[FastAPI Backend]
-
-  N --> V[Pages and UI Components]
-  V --> C[Shared Component Library]
-  V --> S[Frontend Services]
+  B --> DB[(PostgreSQL)]
+  B --> AI[Gemini / Groq / OpenAI]
 ```
 
-Key idea:
-- The browser talks to `localhost:3000`.
-- The frontend proxies backend requests server-side via `app/api/v1/[...path]/route.ts`.
-- This avoids exposing internal Docker hostnames and reduces CORS complexity.
+### Why this architecture?
+
+- Browser always talks to `localhost:3000`.
+- Backend calls are proxied server-side via `app/api/v1/[...path]/route.ts`.
+- Reduces CORS complexity and avoids leaking internal Docker hostnames.
 
 ---
 
-## 3. Route Map (Pages)
+## Tech Stack
 
-| Route | File | Purpose |
+| Category | Tools |
+|---|---|
+| Framework | Next.js 16.1.6 (App Router) |
+| UI Runtime | React 19.2.3 |
+| Language | TypeScript 5 |
+| Styling | Tailwind CSS v4 |
+| Markdown | react-markdown + remark-gfm |
+| HTTP | Native `fetch` (main) + Axios client abstraction |
+| Charts | Recharts |
+| Icons | Lucide React |
+
+---
+
+## Pages and User Flows
+
+### Main Routes
+
+| Route | Purpose | File |
 |---|---|---|
-| `/` | `app/page.tsx` | Redirects to dashboard |
-| `/dashboard` | `app/(app)/dashboard/page.tsx` | Metrics, most-used rubric, recent evaluations |
-| `/new-evaluation` | `app/(app)/new-evaluation/page.tsx` | Create evaluation, upload briefing PDF, choose AI provider/model |
-| `/rubrics` | `app/(app)/rubrics/page.tsx` | Manage rubric templates, criteria, levels |
-| `/past-evaluations` | `app/(app)/past-evaluations/page.tsx` | Search/filter/export evaluations history |
-| `/past-evaluations/[id]` | `app/(app)/past-evaluations/[id]/page.tsx` | Detailed evaluation report and findings |
-| `/components-demo` | `app/components-demo/page.tsx` | Internal component showcase |
+| `/` | Redirect entry point | `app/page.tsx` |
+| `/dashboard` | KPIs, recent evaluations, summary cards | `app/(app)/dashboard/page.tsx` |
+| `/new-evaluation` | Create evaluation flow | `app/(app)/new-evaluation/page.tsx` |
+| `/rubrics` | Rubric CRUD and criteria-level editing | `app/(app)/rubrics/page.tsx` |
+| `/past-evaluations` | Search/filter/export historical evaluations | `app/(app)/past-evaluations/page.tsx` |
+| `/past-evaluations/[id]` | Detailed report and findings analysis | `app/(app)/past-evaluations/[id]/page.tsx` |
+| `/components-demo` | Internal UI showcase | `app/components-demo/page.tsx` |
+
+### Navigation Layout
+
+- App shell is mounted in `app/(app)/layout.tsx`.
+- `Sidebar` provides desktop navigation + mobile drawer behavior.
+- `MainLayout` handles responsive top bar and content container.
 
 ---
 
-## 4. Layout System
+## UI System and Components
 
-| Layer | File | Responsibility |
-|---|---|---|
-| Root layout | `app/layout.tsx` | Global fonts, base metadata, hydration warning handling |
-| App shell layout | `app/(app)/layout.tsx` | Sidebar navigation and mobile drawer |
-| Layout primitives | `components/layout/Container.tsx` | `MainLayout`, `PageHeader`, `Container` |
-| Sidebar | `components/layout/Sidebar.tsx` | Desktop sidebar + mobile overlay drawer |
+### Design Goals
 
-Mobile behavior highlights:
-- Hamburger top bar on small screens.
-- Sidebar drawer with backdrop and close controls.
-- Responsive paddings and wrapped metadata in detail/list pages.
+- Consistent visual language.
+- Reusable components with typed props.
+- Fast page assembly with minimal duplication.
+- Responsive-first behavior for mobile and desktop.
 
----
+### UI Components (`components/ui`)
 
-## 5. API Integration Strategy
+| Component | Role |
+|---|---|
+| `Alert` | Feedback banners (success/error/info) |
+| `Badge` | Status labels and semantic tags |
+| `Button` | Variants, sizes, loading states |
+| `Card` | Section containers and composable layout |
+| `DropdownMenu` | Action menus |
+| `FileUpload` | PDF upload interaction |
+| `Input` | Text input with validation helpers |
+| `MarkdownRenderer` | Safe rendering for AI-generated markdown |
+| `Modal` | Dialog interactions |
+| `RubricBuilder` | Criteria and levels creation/editing |
+| `SearchBar` | Query input with UX helpers |
+| `Select` | Controlled select/dropdown |
+| `StatCard` | KPI visualization blocks |
+| `Table` | Reusable tabular data composition |
+| `Textarea` | Multiline input |
 
-### 5.1 Proxy Route Handler
+### Layout Components (`components/layout`)
 
-File: `app/api/v1/[...path]/route.ts`
+| Component | Role |
+|---|---|
+| `MainLayout` | Application shell |
+| `Sidebar` | Main navigation |
+| `PageHeader` | Consistent page title/description/actions |
+| `Container` | Width and spacing control |
 
-What it does:
-- Proxies all `/api/v1/*` requests to `BACKEND_URL`.
-- Follows `307/308` redirects manually and safely.
-- Preserves method/body when redirecting.
-- Filters hop-by-hop headers.
-- Rejects cross-origin redirect hops to avoid SSRF-style abuse.
-
-Why this exists:
-- Turbopack can be unreliable with rewrite-based proxying in dev.
-- Route Handler proxy keeps network flow stable and Docker-safe.
-
-### 5.2 Request Pattern in Pages
-
-Most pages use relative URLs:
-
-```ts
-fetch('/api/v1/evaluations/')
-fetch('/api/v1/rubrics/')
-```
-
-This ensures all traffic goes through the proxy.
-
-### 5.3 File Upload Flow
-
-File: `lib/services/file-upload.ts`
-
-Flow:
-1. Validate file extension and size client-side.
-2. POST multipart file to `/api/v1/evaluations/briefings`.
-3. Receive `file_path` from backend.
-4. Submit evaluation payload with that `briefing_path`.
+For deep component usage examples, see `components/UI_COMPONENTS.md`.
 
 ---
 
-## 6. AI Provider Configuration (Frontend Behavior)
+## API Integration and Proxy Strategy
 
-Configured in `app/(app)/new-evaluation/page.tsx`.
+### Core principle
 
-Supported providers in UI:
-- `gemini`
-- `groq`
-- `openai`
+All frontend pages call relative routes (`/api/v1/...`) and do **not** call backend host directly from the browser.
+
+### Proxy layer
+
+- File: `app/api/v1/[...path]/route.ts`
+- Handles request forwarding to `BACKEND_URL`.
+- Preserves methods and body for redirect-safe behavior (`307/308`).
+- Applies header filtering and safe redirect validation.
+
+### API client utilities
+
+- `lib/api/client.ts` contains Axios client setup.
+- Most current page calls use native `fetch`.
+- Shared file upload logic lives in `lib/services/file-upload.ts`.
+
+---
+
+## Data and AI Configuration Flow
+
+### New Evaluation Flow
+
+1. Fetch available rubrics.
+2. Upload briefing PDF (`/api/v1/evaluations/briefings`).
+3. Build payload with:
+   - `rubric_id`
+   - `repo_url`
+   - `briefing_path`
+   - optional `ai_provider` + `ai_model`
+4. Optionally attach `X-API-Key` if user provides BYOK key.
+5. Submit evaluation request.
+
+### AI Provider Options in UI
+
+- Default server config (empty provider/model)
+- Gemini
+- Groq
+- OpenAI
 
 Behavior:
-- If provider/model are empty, frontend sends no custom AI config and backend defaults are used.
-- If provider/model are selected, they are included in request body.
-- If user provides API key, frontend sends it as `X-API-Key` header.
-
-Important note:
-- Backend validation rules determine whether a custom provider/model requires explicit API key.
+- Empty provider/model => backend defaults.
+- Custom provider/model => frontend includes both values.
+- API key is optional at UI level, backend rules decide final validation.
 
 ---
 
-## 7. Component Library Overview
-
-### 7.1 UI Components (`components/ui`)
-
-| Component | Role |
-|---|---|
-| `Alert.tsx` | Success/error dismissible banners |
-| `Badge.tsx` | Status labels and semantic pills |
-| `Button.tsx` | Button variants, sizes, loading states |
-| `Card.tsx` | Generic card containers and sections |
-| `DropdownMenu.tsx` | Context/action menus |
-| `FileUpload.tsx` | Upload input with drag/drop UX |
-| `Input.tsx` | Text input with helper/error states |
-| `MarkdownRenderer.tsx` | Safe markdown rendering for summaries/findings |
-| `Modal.tsx` | Generic modal dialogs |
-| `RubricBuilder.tsx` | Rubric form builder (criteria + levels) |
-| `SearchBar.tsx` | Search UX with clean interaction |
-| `Select.tsx` | Controlled select component |
-| `StatCard.tsx` | Dashboard KPI cards |
-| `Table.tsx` | Reusable table primitives |
-| `Textarea.tsx` | Multiline input component |
-
-Additional docs:
-- `components/UI_COMPONENTS.md`
-
-### 7.2 Layout Components (`components/layout`)
-
-| Component | Role |
-|---|---|
-| `Container.tsx` | Width constraints and page primitives |
-| `Sidebar.tsx` | Primary navigation (desktop + mobile drawer) |
-| `index.ts` | Layout exports |
-
----
-
-## 8. Project Structure
+## Project Structure
 
 ```text
 frontend/
@@ -176,9 +206,9 @@ frontend/
 │   │   ├── layout.tsx
 │   │   ├── dashboard/page.tsx
 │   │   ├── new-evaluation/page.tsx
+│   │   ├── rubrics/page.tsx
 │   │   ├── past-evaluations/page.tsx
-│   │   ├── past-evaluations/[id]/page.tsx
-│   │   └── rubrics/page.tsx
+│   │   └── past-evaluations/[id]/page.tsx
 │   ├── api/v1/[...path]/route.ts
 │   └── components-demo/page.tsx
 ├── components/
@@ -198,76 +228,77 @@ frontend/
 
 ---
 
-## 9. Environment Variables
+## Environment Variables
 
-Use `.env.example` as base.
+Start from example file:
 
 ```bash
 cp .env.example .env
 ```
 
-Variables:
+### Supported variables
 
-| Variable | Scope | Default | Description |
+| Variable | Scope | Description | Default |
 |---|---|---|---|
-| `BACKEND_URL` | Server-side | `http://backend:8000` | Backend base URL used only by route handler proxy |
+| `BACKEND_URL` | Server-side only | Upstream FastAPI URL for proxy route | `http://backend:8000` |
 
-Security notes:
-- Do not put provider API keys in frontend env files.
-- Provider keys should come from runtime input (BYOK) or backend env.
-- Keep `.env` files out of commits when they contain secrets.
+### Security notes
+
+- Do not persist API keys in frontend env files.
+- BYOK keys are entered at runtime by users.
+- Keep sensitive values out of Git commits.
 
 ---
 
-## 10. Development
+## Run and Build
 
-### 10.1 Prerequisites
+### Prerequisites
 
 - Node.js 20+
 - npm 10+
 
-### 10.2 Local Run
+### Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-App URL:
-- `http://localhost:3000`
-
-### 10.3 Available Scripts
+### Production build
 
 ```bash
-npm run dev
 npm run build
 npm run start
+```
+
+### Linting
+
+```bash
 npm run lint
 ```
 
 ---
 
-## 11. Docker Workflow
+## Docker Setup
 
-### 11.1 Development image
+### Development image
 
-File: `Dockerfile.dev`
-
-- Base: `node:20-slim`
-- Uses volume mounts for hot reload in Compose
+- File: `Dockerfile.dev`
+- Uses `node:20-slim`
 - Exposes port `3000`
+- Supports hot reload with mounted volumes
 
-### 11.2 Production image
+### Production image
 
-File: `Dockerfile.prod`
-
+- File: `Dockerfile.prod`
 - Multi-stage build
-- `next build` + standalone output
+- Next.js standalone output
 - Non-root runtime user
-- Healthcheck included
+- Built-in container healthcheck
 
-Important operational note:
-- If env vars change in Compose `env_file`, use container recreate (not only restart):
+### Important env reload tip
+
+When environment variables change, recreate containers:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
@@ -275,86 +306,68 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
 
 ---
 
-## 12. Responsive Design Notes
+## Responsive Design Guidelines
 
-Current responsive strategy includes:
-- Mobile drawer navigation (`Sidebar` + `MainLayout`).
-- Adaptive paddings across dashboard/history/detail pages.
-- Wrapped metadata badges and compact card spacing on small screens.
-- `MarkdownRenderer` tuned for long content, code blocks, links, and table cells.
+The frontend is optimized for both desktop and narrow mobile widths.
 
-Testing checklist for 320px width:
-- Dashboard cards and recent table header spacing.
-- Past evaluations filters and row metadata wrapping.
-- Evaluation detail findings, suggestions, and markdown blocks.
+### What is covered
 
----
+- Sidebar drawer and mobile top navigation.
+- Adaptive paddings across dashboard/list/detail pages.
+- Wrapped badges and metadata rows.
+- Markdown hardening for:
+  - long links
+  - long code snippets
+  - markdown tables in narrow viewports
 
-## 13. Code Quality and Conventions
+### Recommended manual checks
 
-- TypeScript-first components and interfaces.
-- Strongly-typed API response handling in pages.
-- Keep UI logic close to pages, extract reusable logic to `lib/services`.
-- Prefer relative API paths (`/api/v1/...`) to guarantee proxy usage.
-- Keep component styles consistent with existing design language.
-
-Recommended commit style:
-- Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`).
+- Viewport: 320x824
+- Pages: dashboard, past evaluations list, evaluation detail
+- Validate no clipped text and no horizontal overflow except intentional code/table scroll
 
 ---
 
-## 14. Troubleshooting
+## Troubleshooting
 
-### 14.1 Proxy cannot reach backend
+### 1) Backend appears unreachable
 
 Symptoms:
-- `502` from frontend API route
+- Proxy returns 502.
 
 Checks:
-- Backend container running
-- Correct `BACKEND_URL`
-- Backend route availability (`/api/v1/...`)
+- Backend container is up.
+- `BACKEND_URL` is correct.
+- Backend route `/api/v1/...` responds.
 
-### 14.2 Frontend changes not reflected
+### 2) Changes not visible in browser
 
 Actions:
-1. Hard refresh browser (`Ctrl+Shift+R`)
+1. Hard refresh: `Ctrl+Shift+R`
 2. Restart frontend container
-3. If env changed, recreate container with `--force-recreate`
+3. Recreate container if env changed
 
-### 14.3 Markdown overflow on mobile
+### 3) AI evaluation returns provider auth errors
 
-Check:
-- `components/ui/MarkdownRenderer.tsx`
-- Ensure wrapper and table/code rules still include responsive wrapping behavior
-
----
-
-## 15. Contribution Guide
-
-1. Create a feature branch from `development`.
-2. Implement changes with TypeScript + existing UI conventions.
-3. Run `npm run lint`.
-4. Open PR with clear scope, screenshots (if UI), and testing notes.
+Checks:
+- Provider key validity in backend runtime env
+- Conflicting duplicate env keys
+- Whether a custom `X-API-Key` is overriding server key
 
 ---
 
-## 16. Quick Reference
+## Contributing
 
-| Need | Where to look |
-|---|---|
-| Navigation shell | `app/(app)/layout.tsx`, `components/layout/Sidebar.tsx` |
-| API proxy behavior | `app/api/v1/[...path]/route.ts` |
-| New evaluation flow | `app/(app)/new-evaluation/page.tsx` |
-| Markdown rendering | `components/ui/MarkdownRenderer.tsx` |
-| Shared upload logic | `lib/services/file-upload.ts` |
-| Next config and redirects | `next.config.ts` |
+1. Branch from `development`.
+2. Keep code typed and component-driven.
+3. Reuse existing UI primitives before creating new ones.
+4. Run lint before opening PR.
+5. Include screenshots for UI changes.
 
 ---
 
-If you are new to this codebase, start with:
-1. `app/(app)/layout.tsx`
-2. `app/(app)/new-evaluation/page.tsx`
-3. `app/api/v1/[...path]/route.ts`
+<div align="center">
 
-That sequence gives you the fastest understanding of structure, business flow, and infrastructure.
+### Built for maintainability, speed, and a reliable AI-evaluation workflow.
+
+</div>
