@@ -20,6 +20,7 @@ import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services
 // ---------------------------------------------------------------------------
 
 const AI_PROVIDERS: SelectOption[] = [
+  { value: '',       label: 'Predeterminado del servidor (Gemini)' },
   { value: 'gemini', label: 'Gemini (Google)' },
   { value: 'groq',   label: 'Groq' },
   { value: 'openai', label: 'OpenAI' },
@@ -43,9 +44,9 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   ],
 };
 
-// Gemini is pre-selected so users can submit without touching the AI fields.
-const DEFAULT_PROVIDER = 'gemini';
-const DEFAULT_MODEL    = 'gemini-2.0-flash';
+// Empty values mean "use backend defaults" (Gemini configured server-side).
+const DEFAULT_PROVIDER = '';
+const DEFAULT_MODEL = '';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,7 +77,7 @@ export default function NewEvaluationPage() {
   const [rubricsLoading, setRubricsLoading] = useState(true);
   const [rubricsError, setRubricsError] = useState(false);
 
-  // Form — Gemini is pre-selected so the user can submit without touching the AI fields.
+  // Form — empty AI config means the backend default provider/model is used.
   const [form, setForm] = useState<FormState>({
     rubricId: '',
     briefingFile: null,
@@ -124,7 +125,7 @@ export default function NewEvaluationPage() {
     ? (MODELS_BY_PROVIDER[form.provider] ?? [])
     : [];
 
-  // When provider changes, auto-select the first model of that provider.
+  // When provider changes, auto-select the first model for convenience.
   const handleProviderChange = (value: string) => {
     const providerModels = MODELS_BY_PROVIDER[value] ?? [];
     const firstModelValue = providerModels[0]?.value ?? '';
@@ -185,14 +186,34 @@ export default function NewEvaluationPage() {
         throw new Error('Por favor sube el briefing antes de enviar');
       }
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      const apiKey = form.apiKey.trim();
+
+      const payload: Record<string, unknown> = {
+        rubric_id: parseInt(form.rubricId, 10),
+        repo_url: form.repoUrl,
+        briefing_path: briefingPath,
+      };
+
+      // Send custom AI configuration when provider+model are selected.
+      // If API key is omitted, backend should use provider credentials from .env.
+      const hasCustomSelection = form.provider !== '' && form.model !== '';
+      if (hasCustomSelection) {
+        payload.ai_provider = form.provider;
+        payload.ai_model = form.model;
+      }
+
+      // Optional BYOK via header.
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+      }
+
       const res = await fetch('/api/v1/evaluations/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rubric_id: parseInt(form.rubricId, 10),
-          repo_url: form.repoUrl,
-          briefing_path: briefingPath,
-        }),
+        headers,
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json().catch(() => ({})) as {
@@ -222,7 +243,7 @@ export default function NewEvaluationPage() {
     label: r.title,
   }));
 
-  // Provider and model are optional — the backend uses Gemini by default when omitted.
+  // Provider/model/API key are optional. When omitted, backend default AI config is used.
   // briefingServerPath is set only after a successful upload, so it is the right guard.
   const isFormValid =
     form.rubricId !== '' &&
@@ -306,10 +327,11 @@ export default function NewEvaluationPage() {
             {/* AI Provider */}
             <Select
               label="Proveedor de IA"
-              placeholder="Selecciona un proveedor..."
+              placeholder="Predeterminado del servidor (Gemini)"
               options={AI_PROVIDERS}
               value={form.provider}
               onChange={handleProviderChange}
+              helperText="Puedes elegir proveedor/modelo sin clave API para usar la configuración del servidor (.env)."
               fullWidth
             />
 
@@ -323,6 +345,7 @@ export default function NewEvaluationPage() {
               value={form.model}
               onChange={(val) => setForm((prev) => ({ ...prev, model: val }))}
               disabled={!form.provider}
+              helperText={!form.provider ? 'No es necesario para la configuración predeterminada.' : undefined}
               fullWidth
             />
 
@@ -335,7 +358,7 @@ export default function NewEvaluationPage() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, apiKey: e.target.value }))
               }
-              helperText="Déjalo vacío para usar la clave del servidor."
+              helperText="Opcional: si la dejas vacía, se usará la clave configurada en el servidor para el proveedor seleccionado."
               rightIcon={
                 <button
                   type="button"
