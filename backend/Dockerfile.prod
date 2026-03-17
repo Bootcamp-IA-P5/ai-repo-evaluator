@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.prod.txt requirements.txt ./
 RUN pip install --no-cache-dir --user -r requirements.txt
 
+# Copy source code
+COPY . .
+
 # Stage 2: Runner
 FROM python:3.11-slim AS runner
 
@@ -34,6 +37,12 @@ ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Copy application code
 COPY --chown=appuser:appuser . .
+
+# Delete not needed files in prod
+RUN rm -f /app/requirements.prod.txt
+RUN rm -f /app/requirements.dev.txt
+RUN rm -f /app/requirements.txt
+RUN rm -f /app/.dockerignore
 
 # Switch to non-root user
 USER appuser
