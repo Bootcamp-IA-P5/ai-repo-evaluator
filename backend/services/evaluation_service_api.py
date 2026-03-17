@@ -262,10 +262,7 @@ def run_evaluation_task(
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
         
         # Normalize ai_provider to a string identifier for consistent handling
-        if isinstance(ai_provider, AIProvider):
-            ai_provider_normalized = ai_provider.value
-        else:
-            ai_provider_normalized = ai_provider
+        ai_provider_normalized = ai_provider
 
         # 2. Resolve embedding configuration based on business logic
         if ai_provider_normalized in ("gemini", "openai"):
