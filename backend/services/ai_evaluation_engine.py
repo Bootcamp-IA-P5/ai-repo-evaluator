@@ -49,9 +49,11 @@ class AIEvaluationEngine:
     ):
         """Initialize the AI evaluation engine with required services."""
         self.git_loader = GitLoaderService()
+        #extract value if provider is an enum, otherwise use as-is
+        p_value = provider.value if hasattr(provider, 'value') else provider
         # If no API key provided, use settings based on provider
         if api_key is None:
-            settings_provider = SettingsAIProvider(provider.value)
+            settings_provider = SettingsAIProvider(p_value)
             api_key = get_api_key(settings_provider)
             model = get_model(settings_provider)
             
@@ -494,17 +496,31 @@ def run_evaluation_task(
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
 
-        # 2. Initialize AI evaluation engine
-        # Use provided AI configuration or default to settings
-        if ai_provider and ai_model and ai_api_key:
-            ai_engine = AIEvaluationEngine(
-                provider=AIProvider(ai_provider),
-                model=ai_model,
-                api_key=ai_api_key
-            )
+        # Normalize ai_provider to a string identifier for consistent handling
+        ai_provider_normalized = ai_provider.lower() if ai_provider else "gemini"
+        
+        # 2. Resolve embedding configuration based on business logic
+    
+        if ai_provider_normalized == "groq":
+            resolved_emb_provider = AIProvider.GEMINI
+            resolved_emb_model = settings.EMBEDDING_MODEL
+            resolved_emb_key =settings.GEMINI_API_KEY
+            logger.info("Modo Híbrido: Chat con Groq y Búsqueda con Gemini")
         else:
-            # Use default configuration from settings
-            ai_engine = AIEvaluationEngine()
+            # For OpenAI and Gemini, use the same provider for embeddings
+            resolved_emb_provider = ai_provider_normalized
+            resolved_emb_model = ai_model
+            resolved_emb_key = ai_api_key
+        
+        # Initialize AI evaluation engine
+        ai_engine = AIEvaluationEngine(
+            provider=ai_provider_normalized, 
+            model=ai_model, 
+            api_key=ai_api_key,
+            embedding_provider=resolved_emb_provider,
+            embedding_model=resolved_emb_model,
+            embedding_api_key=resolved_emb_key,
+        )
 
         # 3. Parse briefing chunks from snapshot
         try:

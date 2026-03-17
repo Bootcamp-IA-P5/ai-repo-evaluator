@@ -262,24 +262,22 @@ def run_evaluation_task(
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
         
         # Normalize ai_provider to a string identifier for consistent handling
-        ai_provider_normalized = ai_provider
+        ai_provider_normalized = ai_provider.lower() if ai_provider else "gemini"
 
         # 2. Resolve embedding configuration based on business logic
-        if ai_provider_normalized in ("gemini", "openai"):
-            # Gemini/OpenAI provide both LLM and embeddings; use same provider and key
-            resolved_emb_provider = ai_provider_normalized
-            resolved_emb_model = None  # ContextEngine will use default model for that provider
-            resolved_emb_key = ai_api_key
+    
+        if ai_provider_normalized == "groq":
+            resolved_emb_provider = AIProvider.GEMINI
+            resolved_emb_model = settings.EMBEDDING_MODEL
+            resolved_emb_key =settings.GEMINI_API_KEY
+            logger.info("Modo Híbrido: Chat con Groq y Búsqueda con Gemini")
         else:
-            # Groq without explicit embedding provider, or no config at all -> fallback to system defaults
-            resolved_emb_provider = None
-            resolved_emb_model = None
-            resolved_emb_key = None
+            # For OpenAI and Gemini, use the same provider for embeddings
+            resolved_emb_provider = ai_provider_normalized
+            resolved_emb_model = ai_model
+            resolved_emb_key = ai_api_key
             
         # 3. Initialize AI evaluation engine
-        if not ai_provider_normalized:
-            ai_provider_normalized = AIProvider.GEMINI.value
-            
         ai_engine = AIEvaluationEngine(
             provider=ai_provider_normalized, 
             model=ai_model, 
