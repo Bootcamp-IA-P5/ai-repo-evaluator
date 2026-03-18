@@ -156,7 +156,7 @@ class AIClient:
                     {"role": "system", "content": "You are an expert code reviewer evaluating student projects against specific rubric criteria."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
+                temperature=0,
                 max_tokens=1000
             )
             return response.choices[0].message.content
@@ -164,7 +164,10 @@ class AIClient:
         if self.provider == AIProvider.GEMINI:
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=prompt
+                contents=prompt,
+                config={
+                    'temperature': 0
+                }
             )
             return response.text
 
@@ -175,7 +178,7 @@ class AIClient:
                     {"role": "system", "content": "You are an expert code reviewer evaluating student projects against specific rubric criteria."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
+                temperature=0,
                 max_tokens=1000
             )
             return response.choices[0].message.content

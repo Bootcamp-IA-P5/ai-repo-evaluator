@@ -79,7 +79,7 @@ class BriefingProcessor:
                 for i, chunk in enumerate(chunks)
             ]
 
-            logger.info(f"Briefing processed: {len(documents)} chunks generated.")
+            logger.debug(f"Briefing processed: {len(documents)} chunks generated.")
             
             return documents
 

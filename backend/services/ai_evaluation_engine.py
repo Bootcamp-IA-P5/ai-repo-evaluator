@@ -37,6 +37,10 @@ class AIEvaluationEngine:
     - Weighted score calculation
     - AI summary generation
     """
+    
+    embedding_provider = None
+    embedding_model = None
+    embedding_api_key = None
 
     def __init__(
         self,
@@ -49,19 +53,21 @@ class AIEvaluationEngine:
     ):
         """Initialize the AI evaluation engine with required services."""
         self.git_loader = GitLoaderService()
-        #extract value if provider is an enum, otherwise use as-is
-        p_value = provider.value if hasattr(provider, 'value') else provider
+        
+        # If no model provided, use setings from provider
+        if model is None:
+            model = get_model(provider)
+        
         # If no API key provided, use settings based on provider
         if api_key is None:
-            settings_provider = SettingsAIProvider(p_value)
-            api_key = get_api_key(settings_provider)
-            model = get_model(settings_provider)
+            api_key = get_api_key(provider)
             
         self.embedding_provider = embedding_provider
         self.embedding_model = embedding_model
         self.embedding_api_key = embedding_api_key
         
         logger.debug(f"Provider: {provider}, Model: {model}, API Key: {api_key[:5] if api_key else 'None'}")
+        logger.debug(f"Embedding Provider: {self.embedding_provider}, Model: {self.embedding_model}, API Key: {self.embedding_api_key[:5] if self.embedding_api_key else 'None'}")
         self.ai_client = AIClient(provider=provider, model=model, api_key=api_key)
 
     def evaluate_repository(
@@ -83,13 +89,13 @@ class AIEvaluationEngine:
         Returns:
             Dictionary containing evaluation results with findings, total score, and AI summary
         """
-        logger.info(f"Starting AI evaluation for evaluation {evaluation_id}")
+        logger.debug(f"Starting AI evaluation for evaluation {evaluation_id}")
         
         # 1. Clone repository and process code
         try:
             logger.debug(f"Cloning repository: {repo_url}")
             code_chunks = self.git_loader.fetch_and_process(repo_url)
-            logger.info(f"Repository cloned successfully: {len(code_chunks)} code chunks generated")
+            logger.debug(f"Repository cloned successfully: {len(code_chunks)} code chunks generated")
         except Exception as e:
             logger.error(f"Failed to clone repository {repo_url}: {e}")
             raise RuntimeError(Messages.AIRepository.CLONING_FAILED.format(
@@ -100,7 +106,7 @@ class AIEvaluationEngine:
         # 2. Load rubric criteria and levels
         try:
             rubric_data = self._load_rubric_data(rubric_id)
-            logger.info(f"Loaded rubric {rubric_id} with {len(rubric_data['criteria'])} criteria")
+            logger.debug(f"Loaded rubric {rubric_id} with {len(rubric_data['criteria'])} criteria")
         except Exception as e:
             logger.error(f"Failed to load rubric {rubric_id}: {e}")
             raise RuntimeError(Messages.AIRubric.LOADING_FAILED.format(
@@ -117,7 +123,7 @@ class AIEvaluationEngine:
                 embedding_model=self.embedding_model,
                 embedding_api_key=self.embedding_api_key,
             )
-            logger.info(f"ContextEngine built with {len(all_documents)} documents")
+            logger.debug(f"ContextEngine built with {len(all_documents)} documents")
         except Exception as e:
             logger.error(f"Failed to build ContextEngine: {e}")
             raise RuntimeError(f"Failed to build vector index: {str(e)}") from e
@@ -175,7 +181,7 @@ class AIEvaluationEngine:
         else:
             total_score = 0.0
             
-        logger.info(f"Evaluation completed. Total score: {total_score:.2f}")
+        logger.debug(f"Evaluation completed. Total score: {total_score:.2f}")
 
         # 6. Generate AI summary
         try:
@@ -185,7 +191,7 @@ class AIEvaluationEngine:
                 findings=findings,
                 total_score=total_score
             )
-            logger.info("AI summary generated successfully")
+            logger.debug("AI summary generated successfully")
         except Exception as e:
             logger.error(f"Failed to generate AI summary: {e}")
             ai_summary = Messages.AIEvaluation.AI_SUMMARY_GENERATION_FAILED.format(error=str(e))
@@ -457,130 +463,3 @@ class AIEvaluationEngine:
         except Exception as e:
             logger.error(f"Failed to generate AI summary: {e}")
             return f"Summary generation failed: {str(e)}"
-
-
-def run_evaluation_task(
-    evaluation_id: int, 
-    db_url: str,
-    ai_provider: str = None,
-    ai_model: str = None,
-    ai_api_key: str = None
-):
-    """
-    Background task for running the AI evaluation process.
-
-    This task is triggered after the evaluation record is created and
-    performs the long-running AI analysis. It manages the evaluation
-    lifecycle: pending → processing → completed/failed.
-
-    Args:
-        evaluation_id: The ID of the evaluation to process
-        db_url: Database URL for creating a new session
-        ai_provider: AI provider to use (openai, gemini, groq) - optional
-        ai_model: Specific model for the provider - optional
-        ai_api_key: API key for the provider - optional
-    """
-    # Create a new database session for the background task
-    db = SessionLocal()
-
-    try:
-        logger.debug(f"Starting background evaluation task for evaluation {evaluation_id}")
-
-        # 1. Update status to 'processing'
-        evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
-        if evaluation is None:
-            logger.error(f"Evaluation {evaluation_id} not found in background task")
-            return
-
-        evaluation.status = settings.EVALUATION_STATUS_PROCESSING
-        db.commit()
-        logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
-
-        # Normalize ai_provider to a string identifier for consistent handling
-        ai_provider_normalized = ai_provider.lower() if ai_provider else "gemini"
-        
-        # 2. Resolve embedding configuration based on business logic
-    
-        if ai_provider_normalized == "groq":
-            resolved_emb_provider = AIProvider.GEMINI
-            resolved_emb_model = settings.EMBEDDING_MODEL
-            resolved_emb_key =settings.GEMINI_API_KEY
-            logger.info("Modo Híbrido: Chat con Groq y Búsqueda con Gemini")
-        else:
-            # For OpenAI and Gemini, use the same provider for embeddings
-            resolved_emb_provider = ai_provider_normalized
-            resolved_emb_model = ai_model
-            resolved_emb_key = ai_api_key
-        
-        # Initialize AI evaluation engine
-        ai_engine = AIEvaluationEngine(
-            provider=ai_provider_normalized, 
-            model=ai_model, 
-            api_key=ai_api_key,
-            embedding_provider=resolved_emb_provider,
-            embedding_model=resolved_emb_model,
-            embedding_api_key=resolved_emb_key,
-        )
-
-        # 3. Parse briefing chunks from snapshot
-        try:
-            briefing_chunks = json.loads(evaluation.briefing_snapshot)
-            logger.debug(f"Parsed {len(briefing_chunks)} briefing chunks")
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse briefing snapshot for evaluation {evaluation_id}: {e}")
-            raise RuntimeError(Messages.AIEvaluation.PARSING_RESPONSE_FAILED.format(
-                error=str(e)
-            )) from e
-
-        # 4. Run AI evaluation
-        try:
-            evaluation_result = ai_engine.evaluate_repository(
-                evaluation_id=evaluation_id,
-                repo_url=evaluation.repo_url,
-                rubric_id=evaluation.rubric_id,
-                briefing_chunks=briefing_chunks
-            )
-            
-            logger.info(f"AI evaluation completed for evaluation {evaluation_id}")
-            
-        except Exception as e:
-            logger.error(f"AI evaluation failed for evaluation {evaluation_id}: {e}")
-            # Re-raise to trigger error handling below
-            raise
-
-        # 5. Create finding records
-        for finding_data in evaluation_result['findings']:
-            finding = Finding(
-                evaluation_id=evaluation_id,
-                criterion_id=finding_data['criterion_id'],
-                selected_level_id=finding_data['selected_level_id'],
-                file_path=finding_data.get('file_path'),
-                evidence_snippet=finding_data.get('evidence_snippet'),
-                improvement_suggestion=finding_data.get('improvement_suggestion')
-            )
-            db.add(finding)
-
-        # 6. Update evaluation with results
-        evaluation.total_score = evaluation_result['total_score']
-        evaluation.ai_summary = evaluation_result['ai_summary']
-        evaluation.status = settings.EVALUATION_STATUS_COMPLETED
-        
-        db.commit()
-
-        logger.info(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
-
-    except Exception as e:
-        # 7. On failure, update status to 'failed'
-        logger.error(f"Evaluation {evaluation_id} failed: {e}")
-
-        try:
-            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
-            if evaluation:
-                evaluation.status = settings.EVALUATION_STATUS_FAILED
-                evaluation.ai_summary = f"Evaluation failed: {str(e)}"
-                db.commit()
-        except Exception as commit_error:
-            logger.error(f"Failed to update evaluation status to '{settings.EVALUATION_STATUS_FAILED}': {commit_error}")
-
-    finally:
-        db.close()

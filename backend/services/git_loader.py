@@ -51,8 +51,6 @@ class GitLoaderService:
                 Repo.clone_from(
                     repo_url,
                     target_dir,
-                    depth=1,
-                    single_branch=True,
                 )
             except Exception as e:
                 raise RuntimeError(f"Error cloning repository: {str(e)}") from e
@@ -63,23 +61,33 @@ class GitLoaderService:
             # 2a. Source code → LanguageParser (understands code structure)
             code_docs = self._load_code_files(target_dir)
             all_documents.extend(code_docs)
-            logger.info(f"Source code: {len(code_docs)} documents loaded")
+            logger.debug(f"Source code: {len(code_docs)} documents loaded")
 
             # 2b. Notebooks .ipynb → extract cells
             notebook_docs = self._load_notebooks(target_dir)
             all_documents.extend(notebook_docs)
-            logger.info(f"Notebooks: {len(notebook_docs)} documents loaded")
+            logger.debug(f"Notebooks: {len(notebook_docs)} documents loaded")
 
             # 2c. Text, configuration and special files → plain text
             text_docs = self._load_text_files(target_dir)
             all_documents.extend(text_docs)
-            logger.info(f"Text/config: {len(text_docs)} documents loaded")
+            logger.debug(f"Text/config: {len(text_docs)} documents loaded")
+            
+            #2d. Git history -> Commits and branches
+            git_docs = self._load_git_history(target_dir)
+            all_documents.extend(git_docs)
+            logger.debug(f"Git history: {len(git_docs)} commits loaded")
+            
+            # 2e. Directory Structure
+            structure_doc = self._generate_repo_tree(target_dir)
+            all_documents.append(structure_doc)
+            logger.debug("Directory structure map generated and added to documents")
 
             if not all_documents:
                 logger.warning("No processable files found in the repository")
                 return []
 
-            logger.info(f"Total: {len(all_documents)} documents before splitting")
+            logger.debug(f"Total: {len(all_documents)} documents before splitting")
 
             # 3. Splitting (chunking)
             splitter = RecursiveCharacterTextSplitter(
@@ -95,7 +103,7 @@ class GitLoaderService:
                     source = chunk.metadata.get("source", "")
                     chunk.metadata["file_path"] = os.path.relpath(source, target_dir) if source else "unknown"
 
-            logger.info(f"Repository processed: {len(chunks)} chunks generated")
+            logger.debug(f"Repository processed: {len(chunks)} chunks generated")
             return chunks
 
         finally:
@@ -273,3 +281,50 @@ class GitLoaderService:
                     logger.warning(f"Error reading {filepath}: {e}")
 
         return documents
+    
+    def _load_git_history(self, target_dir) -> list[Document]:
+        git_docs = []
+        try:
+            repo = Repo(target_dir)
+            # Only las 100 commits
+            for commit in repo.iter_commits(max_count=100):
+                # Create content that can be used by the LLM
+                content = (
+                    f"GIT_COMMIT_ENTRY:\n"
+                    f"Hash: {commit.hexsha}\n"
+                    f"Author: {commit.author.name}\n"
+                    f"Date: {commit.committed_datetime}\n"
+                    f"Message: {commit.message.strip()}"
+                )
+                
+                # Include metadata
+                metadata = {
+                    "source": "git_log",
+                    "file_path": "GIT_HISTORY", # Ruta virtual
+                    "commit_hash": commit.hexsha,
+                    "author": commit.author.name,
+                    "timestamp": commit.authored_date
+                }
+                git_docs.append(Document(page_content=content, metadata=metadata))
+                
+        except Exception as e:
+            logger.error(f"Could not load git history: {e}")
+        return git_docs
+    
+    def _generate_repo_tree(self, target_dir):
+        tree_str = "REPOSITORY SRTUCTURE:\n"
+        for root, dirs, files in os.walk(target_dir):
+            # Ignorar carpetas ocultas como .git
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            level = root.replace(target_dir, '').count(os.sep)
+            indent = ' ' * 4 * (level)
+            tree_str += f"{indent}{os.path.basename(root)}/\n"
+            sub_indent = ' ' * 4 * (level + 1)
+            for f in files:
+                tree_str += f"{sub_indent}{f}\n"
+        
+        return Document(
+            page_content=tree_str,
+            metadata={"source": "repo_structure", "file_path": "DIRECTORY_TREE.md"}
+        )
+        

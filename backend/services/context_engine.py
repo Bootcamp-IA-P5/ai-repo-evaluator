@@ -67,9 +67,9 @@ class ContextEngine:
         texts, metadatas = self._extract_texts_and_metadatas(documents)
 
         # Build the FAISS vector store
-        logger.info(f"Building FAISS index with {len(texts)} document chunks...")
+        logger.debug(f"Building FAISS index with {len(texts)} document chunks...")
         self.vector_store = FAISS.from_texts(texts, self.embeddings, metadatas=metadatas)
-        logger.info("FAISS index created successfully.")
+        logger.debug("FAISS index created successfully.")
 
     def get_relevant_context(self, query: str, k: int = 5) -> list[dict]:
         """
@@ -118,7 +118,7 @@ s
         texts, metadatas = self._extract_texts_and_metadatas(documents)
 
         self.vector_store.add_texts(texts, metadatas=metadatas)
-        logger.info(f"Added {len(texts)} documents to FAISS index.")
+        logger.debug(f"Added {len(texts)} documents to FAISS index.")
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -162,37 +162,22 @@ s
         """
         from core.settings import settings, get_api_key, AIProvider
         
-        # Resolve provider
-        resolved_provider = (provider or settings.EMBEDDING_PROVIDER).lower()
-
-        # Resolve model
-        resolved_model = model or settings.EMBEDDING_MODEL
+        
 
         # Create specific embedding provider
-        if resolved_provider == "gemini":
-            # For Gemini, use the key or fallback to environment API key
-            resolved_key = api_key or get_api_key(AIProvider.GEMINI)
-            if not resolved_key:
-                raise ValueError("Embedding API key is required for Gemini embeddings")
-            
+        if provider == AIProvider.GEMINI:
             return GoogleGenerativeAIEmbeddings(
-                model=resolved_model,
-                google_api_key=resolved_key,
+                model=model,
+                google_api_key=api_key,
             )
             
-        elif resolved_provider == "openai":
-            # For OpenAI, default model if not explicitly configured in settings for embeddings
-            if not resolved_model:
-                resolved_model = "text-embedding-3-small" # Sensible default for OpenAI
-            
-            resolved_key = api_key or get_api_key(AIProvider.OPENAI)
-            if not resolved_key:
-                raise ValueError("Embedding API key is required for OpenAI embeddings")
-                
+        elif provider == AIProvider.OPENAI:
             return OpenAIEmbeddings(
-                model=resolved_model,
-                api_key=resolved_key,
+                model=model,
+                api_key=api_key,
             )
             
         else:
-            raise ValueError(f"Unsupported embedding provider: {resolved_provider}. Supported providers: gemini, openai")
+            message=f"Unupported embedding provider: {provider}, model: {model}"
+            logger.error(message)
+            raise ValueError(message)

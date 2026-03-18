@@ -15,11 +15,11 @@ from models import Evaluation, Rubric
 from schemas.response import APIResponse
 from schemas.evaluation import EvaluationResponse, EvaluationResponseWithFindings, FindingResponse
 from services.pdf_processor import BriefingProcessor
-from services.ai_evaluation_engine import AIEvaluationEngine, run_evaluation_task as ai_run_evaluation_task
+from services.ai_evaluation_engine import AIEvaluationEngine#, run_evaluation_task as ai_run_evaluation_task
 from core.logging_config import logger
 from core.messages import Messages
 from core.database import SessionLocal
-from core.settings import AIProvider, settings
+from core.settings import AIProvider, settings, get_model, get_api_key
 
 
 class EvaluationServiceAPI:
@@ -261,25 +261,33 @@ def run_evaluation_task(
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
         
-        # Normalize ai_provider to a string identifier for consistent handling
-        ai_provider_normalized = ai_provider.lower() if ai_provider else "gemini"
-
+        
+        # 1. Resolve ai provider, model and api_key based on the payload received from the frontend
+        if ai_provider is None:
+            ai_provider = AIProvider.GEMINI
+        if ai_model is None:
+            ai_model = get_model(ai_provider)
+        if ai_api_key is None: 
+            ai_api_key = get_api_key(ai_provider)
+        
         # 2. Resolve embedding configuration based on business logic
-    
-        if ai_provider_normalized == "groq":
+        if ai_provider == AIProvider.GROQ:
             resolved_emb_provider = AIProvider.GEMINI
-            resolved_emb_model = settings.EMBEDDING_MODEL
+            resolved_emb_model = settings.GEMINI_EMBEDDING_MODEL
             resolved_emb_key =settings.GEMINI_API_KEY
-            logger.info("Modo Híbrido: Chat con Groq y Búsqueda con Gemini")
+            logger.debug("Hybrid mode: Chat with GROQ and search with GEMINI")
         else:
             # For OpenAI and Gemini, use the same provider for embeddings
-            resolved_emb_provider = ai_provider_normalized
-            resolved_emb_model = ai_model
+            resolved_emb_provider = ai_provider
+            if ai_provider == AIProvider.OPENAI:
+                resolved_emb_model = settings.OPENAI_EMBEDDING_MODEL
+            else:
+                resolved_emb_model = settings.GEMINI_EMBEDDING_MODEL
             resolved_emb_key = ai_api_key
             
         # 3. Initialize AI evaluation engine
         ai_engine = AIEvaluationEngine(
-            provider=ai_provider_normalized, 
+            provider=ai_provider, 
             model=ai_model, 
             api_key=ai_api_key,
             embedding_provider=resolved_emb_provider,
@@ -304,7 +312,7 @@ def run_evaluation_task(
                 briefing_chunks=briefing_chunks
             )
             
-            logger.info(f"AI evaluation completed for evaluation {evaluation_id}")
+            logger.debug(f"AI evaluation completed for evaluation {evaluation_id}")
             
         except Exception as e:
             logger.error(f"AI evaluation failed for evaluation {evaluation_id}: {e}")
@@ -331,7 +339,7 @@ def run_evaluation_task(
         
         db.commit()
 
-        logger.info(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
+        logger.debug(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
 
     except Exception as e:
         # 4. On failure, update status to 'failed'
