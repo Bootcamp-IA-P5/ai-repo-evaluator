@@ -58,12 +58,8 @@ class EvaluationRequest(BaseModel):
 
     @field_validator('ai_api_key')
     @classmethod
-    def validate_ai_api_key(cls, v, info):
-        """Validate that ai_api_key is provided when ai_provider is specified."""
-        # Get the ai_provider value from the current instance
-        ai_provider = info.data.get('ai_provider')
-        if ai_provider is not None and v is None:
-            raise ValueError("ai_api_key is required when ai_provider is specified")
+    def validate_ai_api_key(cls, v):
+        """Get the API Key (optional)"""
         return v
 
     model_config = {

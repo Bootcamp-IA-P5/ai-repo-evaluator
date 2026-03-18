@@ -258,7 +258,7 @@ export default function EvaluationDetailPage() {
   // -- Loading skeleton ------------------------------------------------------
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* Back link skeleton */}
         <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
         {/* Header skeleton */}
@@ -284,7 +284,7 @@ export default function EvaluationDetailPage() {
   // -- Error state -----------------------------------------------------------
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Link
           href="/past-evaluations"
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-6"
@@ -317,7 +317,7 @@ export default function EvaluationDetailPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
       {/* Back link */}
       <Link
@@ -328,7 +328,7 @@ export default function EvaluationDetailPage() {
         Volver a las evaluaciones
       </Link>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0 flex-1">
             {/* Repository */}
@@ -390,9 +390,9 @@ export default function EvaluationDetailPage() {
 
       {/* ── In-progress banner ───────────────────────────────────────────── */}
       {isInProgress && (
-        <div className="rounded-xl bg-blue-50 border border-blue-200 px-6 py-5 flex items-start gap-3">
+        <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 sm:px-6 py-4 sm:py-5 flex items-start gap-3">
           <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0 mt-0.5" />
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-blue-800">
               Evaluación en progreso
             </p>
@@ -405,9 +405,9 @@ export default function EvaluationDetailPage() {
 
       {/* ── Failed banner ────────────────────────────────────────────────── */}
       {isFailed && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-6 py-5 flex items-start gap-3">
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 sm:px-6 py-4 sm:py-5 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-red-800">Evaluación fallida</p>
             {evaluation.ai_summary && (
               <MarkdownRenderer
@@ -421,7 +421,7 @@ export default function EvaluationDetailPage() {
 
       {/* ── AI Summary ───────────────────────────────────────────────────── */}
       {isCompleted && evaluation.ai_summary && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <Lightbulb className="w-4 h-4 text-yellow-500" />
             Resumen IA
@@ -443,7 +443,7 @@ export default function EvaluationDetailPage() {
           </div>
 
           {evaluation.findings.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-12 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 sm:px-6 py-10 sm:py-12 text-center">
               <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
               <p className="text-sm font-medium text-gray-600">Sin hallazgos registrados</p>
               <p className="text-xs text-gray-400 mt-1">
@@ -464,7 +464,7 @@ export default function EvaluationDetailPage() {
                     className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
                   >
                     {/* Finding header */}
-                    <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900">
                           {criterion?.title ?? `Criterion #${finding.criterion_id}`}
@@ -475,7 +475,7 @@ export default function EvaluationDetailPage() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
                         {/* Weight badge */}
                         {criterion && (
                           <span className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-0.5">
@@ -496,7 +496,7 @@ export default function EvaluationDetailPage() {
                     </div>
 
                     {/* Finding body */}
-                    <div className="px-6 py-4 space-y-4">
+                    <div className="px-4 sm:px-6 py-4 space-y-4">
                       {/* File path */}
                       {finding.file_path && (
                         <div className="flex items-start gap-2">
@@ -523,7 +523,7 @@ export default function EvaluationDetailPage() {
                       {finding.improvement_suggestion && (
                         <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-100 px-4 py-3">
                           <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-xs font-medium text-amber-800 mb-0.5">
                               Sugerencia de mejora
                             </p>

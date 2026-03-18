@@ -69,7 +69,7 @@ export interface Finding {
 }
 
 // === LLM TYPES ===
-export type LLMProvider = 'openai' | 'groq' | 'anthropic';
+export type LLMProvider = 'gemini' | 'openai' | 'groq';
 
 export interface LLMModel {
   id: string;

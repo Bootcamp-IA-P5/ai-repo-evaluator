@@ -254,11 +254,6 @@ def create_evaluation(
     """
     # Merge header API key with request body if AI configuration is provided
     if evaluation_request.ai_provider and evaluation_request.ai_model:
-        if not evaluation_request.ai_api_key and not api_key:
-            raise HTTPException(
-                status_code=422,
-                detail="ai_api_key is required when ai_provider and ai_model are specified"
-            )
         # Use header API key if provided, otherwise use body API key
         evaluation_request.ai_api_key = api_key or evaluation_request.ai_api_key
     
