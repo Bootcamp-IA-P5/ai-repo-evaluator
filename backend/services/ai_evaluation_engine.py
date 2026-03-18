@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from core.logging_config import logger
-from core.settings import settings, get_api_key, get_model, AIProvider as SettingsAIProvider
+from core.settings import settings, get_api_key, get_model, AIProvider
 from core.database import SessionLocal
 from core.messages import Messages
 from models import Evaluation, Rubric, Criterion, Level, Finding
