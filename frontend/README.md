@@ -4,14 +4,14 @@
 
 # EvaluAI Frontend
 
-### Interfaz web para evaluar repositorios con IA y rúbricas personalizadas
+### Web interface for evaluating repositories with AI and custom rubrics
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2.3-20232A?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![App Router](https://img.shields.io/badge/Next_App_Router-Enabled-111827?style=for-the-badge)](#-arquitectura-explicada-fácil)
-[![Proxy API](https://img.shields.io/badge/API_Proxy-/api/v1/*-0F766E?style=for-the-badge)](#-cómo-se-conecta-con-el-backend)
+[![App Router](https://img.shields.io/badge/Next_App_Router-Enabled-111827?style=for-the-badge)](#-architecture-explained-easily)
+[![Proxy API](https://img.shields.io/badge/API_Proxy-/api/v1/*-0F766E?style=for-the-badge)](#-how-it-connects-to-the-backend)
 
 </div>
 
@@ -19,73 +19,73 @@
 
 <div align="center">
 
-### Navegación Rápida
+### Quick Navigation
 
-[![Start](https://img.shields.io/badge/Empieza_aquí-Guía_Rápida-2563EB?style=flat-square)](#-guía-rápida-de-lectura)
-[![Arquitectura](https://img.shields.io/badge/Arquitectura-Visual-7C3AED?style=flat-square)](#-arquitectura-explicada-fácil)
-[![Páginas](https://img.shields.io/badge/Páginas-Flujos-0D9488?style=flat-square)](#-páginas-y-qué-hace-cada-una)
-[![Componentes](https://img.shields.io/badge/Componentes-Galería-F59E0B?style=flat-square)](#-galería-de-componentes)
-[![Integración](https://img.shields.io/badge/Integración-API-DC2626?style=flat-square)](#-cómo-se-conecta-con-el-backend)
-[![Mejoras](https://img.shields.io/badge/Mejoras-Hechas_en_Frontend-16A34A?style=flat-square)](#-qué-se-ha-hecho-en-este-frontend)
-[![Responsive](https://img.shields.io/badge/Responsive-Mobile_Hardening-0891B2?style=flat-square)](#-responsive-y-ux-móvil)
+[![Start](https://img.shields.io/badge/Start_Here-Quick_Guide-2563EB?style=flat-square)](#-quick-reading-guide)
+[![Architecture](https://img.shields.io/badge/Architecture-Visual-7C3AED?style=flat-square)](#-architecture-explained-easily)
+[![Pages](https://img.shields.io/badge/Pages-Flows-0D9488?style=flat-square)](#-pages-and-what-each-one-does)
+[![Components](https://img.shields.io/badge/Components-Gallery-F59E0B?style=flat-square)](#-component-gallery)
+[![Integration](https://img.shields.io/badge/Integration-API-DC2626?style=flat-square)](#-how-it-connects-to-the-backend)
+[![Improvements](https://img.shields.io/badge/Improvements-Frontend_Enhancements-16A34A?style=flat-square)](#-what-has-been-done-in-this-frontend)
+[![Responsive](https://img.shields.io/badge/Responsive-Mobile_Hardening-0891B2?style=flat-square)](#-responsive-and-mobile-ux)
 
 </div>
 
 ---
 
-## 👋 Guía rápida de lectura
+## 👋 Quick reading guide
 
-Si conoces poco el proyecto, sigue este orden:
+If you're new to the project, follow this order:
 
-1. Lee [Páginas y qué hace cada una](#-páginas-y-qué-hace-cada-una).
-2. Mira [Cómo se conecta con el backend](#-cómo-se-conecta-con-el-backend).
-3. Revisa [Galería de componentes](#-galería-de-componentes).
-4. Ejecuta el proyecto con [Run local](#-run-local-rápido).
+1. Read [Pages and what each one does](#-pages-and-what-each-one-does).
+2. Look at [How it connects to the backend](#-how-it-connects-to-the-backend).
+3. Review [Component gallery](#-component-gallery).
+4. Run the project with [Run local](#-quick-local-run).
 
-### Resumen en una frase
+### One-sentence summary
 
-El frontend permite crear evaluaciones de repositorios, enviar datos al backend, y mostrar resultados de IA de forma clara y responsive.
-
----
-
-## 🎯 Qué resuelve este frontend
-
-Esta aplicación web permite:
-
-- Crear evaluaciones nuevas usando una rúbrica.
-- Subir un briefing en PDF.
-- Elegir proveedor/modelo de IA (o usar valores por defecto del servidor).
-- Ver historial de evaluaciones con búsqueda, filtros y exportación CSV.
-- Abrir el detalle de una evaluación y leer hallazgos/sugerencias en markdown.
-- Crear y editar rúbricas, criterios y niveles.
+The frontend allows creating repository evaluations, sending data to the backend, and displaying AI results in a clear and responsive manner.
 
 ---
 
-## 🧭 Arquitectura explicada fácil
+## 🎯 What this frontend solves
+
+This web application allows:
+
+- Creating new evaluations using a rubric.
+- Uploading a briefing in PDF format.
+- Choosing an AI provider/model (or using server defaults).
+- Viewing evaluation history with search, filters, and CSV export.
+- Opening detailed evaluation reports and reading findings/suggestions in markdown.
+- Creating and editing rubrics, criteria, and levels.
+
+---
+
+## 🧭 Architecture explained easily
 
 ```mermaid
 flowchart LR
-  U[Usuario en navegador] --> FE[Next.js Frontend]
-  FE --> PX[API v1 Proxy en Next.js]
+  U[User in browser] --> FE[Next.js Frontend]
+  FE --> PX[Next.js API v1 Proxy]
   PX --> BE[FastAPI Backend]
   BE --> DB[(PostgreSQL)]
   BE --> AI[Gemini / Groq / OpenAI]
 ```
 
-### ¿Por qué así?
+### Why this approach?
 
-- El navegador solo llama a `localhost:3000`.
-- El frontend reenvía las peticiones al backend desde el servidor (proxy).
-- Evita problemas de CORS y evita exponer hostnames internos de Docker.
+- The browser only calls `localhost:3000`.
+- The frontend forwards requests to the backend from the server (proxy).
+- Avoids CORS issues and prevents exposing internal Docker hostnames.
 
-### Mapa visual de módulos
+### Visual module map
 
 ```mermaid
 flowchart TD
   A[Frontend] --> B[App Router]
   A --> C[UI Components]
   A --> D[API Proxy]
-  A --> E[Servicios frontend]
+  A --> E[Frontend Services]
 
   B --> B1[Dashboard]
   B --> B2[New Evaluation]
@@ -101,73 +101,73 @@ flowchart TD
 
 ---
 
-## 🧩 Stack tecnológico
+## 🧩 Tech Stack
 
-| Área | Tecnología | Para qué se usa |
+| Area | Technology | What it's used for |
 |---|---|---|
-| Framework | Next.js 16.1.6 | Rutas, layouts, route handlers |
-| UI | React 19.2.3 | Componentes y estado |
-| Lenguaje | TypeScript 5.x | Tipado y mantenimiento |
-| Estilos | Tailwind v4 | Diseño rápido y responsive |
-| Markdown | react-markdown + remark-gfm | Render de reportes IA |
-| HTTP | fetch (principal), Axios (cliente disponible) | Comunicación API |
-| Gráficas | Recharts | KPIs del dashboard |
-| Iconos | Lucide React | Iconografía consistente |
+| Framework | Next.js 16.1.6 | Routes, layouts, route handlers |
+| UI | React 19.2.3 | Components and state |
+| Language | TypeScript 5.x | Typing and maintenance |
+| Styles | Tailwind v4 | Fast and responsive design |
+| Markdown | react-markdown + remark-gfm | AI report rendering |
+| HTTP | fetch (primary), Axios (available client) | API communication |
+| Charts | Recharts | Dashboard KPIs |
+| Icons | Lucide React | Consistent iconography |
 
 ---
 
-## 📄 Páginas y qué hace cada una
+## 📄 Pages and what each one does
 
-| Ruta | Qué ve el usuario | Qué hace técnicamente | Archivo |
+| Route | What the user sees | What it does technically | File |
 |---|---|---|---|
-| `/dashboard` | KPIs, rúbrica más usada, evaluaciones recientes | Carga métricas y últimos registros | `app/(app)/dashboard/page.tsx` |
-| `/new-evaluation` | Formulario de nueva evaluación | Sube PDF, arma payload, envía POST | `app/(app)/new-evaluation/page.tsx` |
-| `/rubrics` | Lista/edición de rúbricas | CRUD de rúbricas, criterios y niveles | `app/(app)/rubrics/page.tsx` |
-| `/past-evaluations` | Historial con filtros | Busca, filtra, exporta CSV, polling | `app/(app)/past-evaluations/page.tsx` |
-| `/past-evaluations/[id]` | Informe detallado | Obtiene evaluación + rúbrica y renderiza markdown | `app/(app)/past-evaluations/[id]/page.tsx` |
+| `/dashboard` | KPIs, most used rubric, recent evaluations | Loads metrics and latest records | `app/(app)/dashboard/page.tsx` |
+| `/new-evaluation` | New evaluation form | Uploads PDF, builds payload, sends POST | `app/(app)/new-evaluation/page.tsx` |
+| `/rubrics` | List/edit rubrics | CRUD of rubrics, criteria, and levels | `app/(app)/rubrics/page.tsx` |
+| `/past-evaluations` | History with filters | Searches, filters, exports CSV, polling | `app/(app)/past-evaluations/page.tsx` |
+| `/past-evaluations/[id]` | Detailed report | Gets evaluation + rubric and renders markdown | `app/(app)/past-evaluations/[id]/page.tsx` |
 
-### Flujo del usuario
+### User flow
 
 ```mermaid
 flowchart TD
-  A[Dashboard] --> B[Nueva Evaluación]
-  B --> C[Subir PDF]
-  C --> D[Elegir IA o default]
-  D --> E[Enviar evaluación]
-  E --> F[Historial]
-  F --> G[Detalle de evaluación]
+  A[Dashboard] --> B[New Evaluation]
+  B --> C[Upload PDF]
+  C --> D[Choose AI or default]
+  D --> E[Send evaluation]
+  E --> F[History]
+  F --> G[Evaluation Detail]
 ```
 
 ---
 
-## 🧱 Galería de componentes
+## 🧱 Component gallery
 
-### Componentes UI principales
+### Main UI components
 
-| Componente | Uso principal |
+| Component | Main use |
 |---|---|
-| `Button` | Acciones principales y secundarias |
-| `Input` / `Textarea` | Inputs de formularios |
-| `Select` | Selección de proveedor/modelo/rúbrica |
-| `FileUpload` | Subida de briefing PDF |
-| `Card` | Bloques visuales del dashboard/report |
-| `Badge` | Estados y etiquetas de metadatos |
-| `Alert` | Mensajes de éxito/error |
-| `Table` | Historial y listas de datos |
-| `StatCard` | Tarjetas KPI |
-| `MarkdownRenderer` | Render de resumen/hallazgos IA |
-| `RubricBuilder` | Editor de rúbricas |
+| `Button` | Primary and secondary actions |
+| `Input` / `Textarea` | Form inputs |
+| `Select` | Provider/model/rubric selection |
+| `FileUpload` | PDF briefing upload |
+| `Card` | Visual blocks for dashboard/report |
+| `Badge` | Status and metadata labels |
+| `Alert` | Success/error messages |
+| `Table` | History and data lists |
+| `StatCard` | KPI cards |
+| `MarkdownRenderer` | Summary/findings IA render |
+| `RubricBuilder` | Rubric editor |
 
-### Layout y navegación
+### Layout and navigation
 
-| Componente | Función |
+| Component | Function |
 |---|---|
-| `MainLayout` | Shell principal de la app |
-| `Sidebar` | Menú lateral (desktop + drawer móvil) |
-| `PageHeader` | Cabecera estándar de cada vista |
-| `Container` | Control de ancho y espaciado |
+| `MainLayout` | Main app shell |
+| `Sidebar` | Sidebar menu (desktop + mobile drawer) |
+| `PageHeader` | Standard header for each view |
+| `Container` | Width and spacing control |
 
-### Ejemplo rápido (realista)
+### Quick example (realistic)
 
 ```tsx
 import { Card, CardContent, Badge, Button, Alert } from '@/components/ui';
@@ -175,49 +175,49 @@ import { Card, CardContent, Badge, Button, Alert } from '@/components/ui';
 <Card className="rounded-xl border border-gray-200">
   <CardContent className="space-y-4">
     <div className="flex items-center justify-between">
-      <h3 className="text-lg font-semibold">Estado de evaluación</h3>
-      <Badge variant="success">Completado</Badge>
+      <h3 className="text-lg font-semibold">Evaluation status</h3>
+      <Badge variant="success">Completed</Badge>
     </div>
 
-    <Button variant="primary">Ver informe</Button>
-    <Alert variant="success" message="Evaluación cargada correctamente" />
+    <Button variant="primary">View report</Button>
+    <Alert variant="success" message="Evaluation loaded successfully" />
   </CardContent>
 </Card>
 ```
 
 ---
 
-## 🔌 Cómo se conecta con el backend
+## 🔌 How it connects to the backend
 
-### Idea clave
+### Key idea
 
-Las páginas del frontend llaman rutas relativas, por ejemplo:
+Frontend pages call relative routes, for example:
 
 - `/api/v1/evaluations/`
 - `/api/v1/rubrics/`
 - `/api/v1/evaluations/briefings`
 
-No llaman directamente `http://backend:8000` desde el navegador.
+They don't call `http://backend:8000` directly from the browser.
 
-### ¿Quién hace de puente?
+### Who acts as the bridge?
 
-- Archivo: `app/api/v1/[...path]/route.ts`
-- Este route handler actúa como proxy server-side.
+- File: `app/api/v1/[...path]/route.ts`
+- This route handler acts as a server-side proxy.
 
-### Ventajas
+### Advantages
 
-- Menos problemas de CORS.
-- Mayor seguridad en cabeceras y redirects.
-- Misma URL para frontend en local y Docker.
+- Fewer CORS issues.
+- Greater security in headers and redirects.
+- Same URL for frontend in local and Docker.
 
-### fetch o axios
+### fetch or axios
 
-- Hoy se usa principalmente `fetch` en páginas.
-- Existe `lib/api/client.ts` con Axios para futuras estandarizaciones.
+- Today we mainly use `fetch` in pages.
+- There's `lib/api/client.ts` with Axios for future standardization.
 
 ---
 
-## 🤖 Flujo de datos de evaluación (simple)
+## 🤖 Evaluation data flow (simple)
 
 ```mermaid
 sequenceDiagram
@@ -231,45 +231,45 @@ sequenceDiagram
   BE-->>PX: file_path
   PX-->>UI: file_path
 
-  UI->>PX: POST evaluación (rúbrica + repo + briefing)
-  PX->>BE: crear evaluación
-  BE->>AI: llamadas de evaluación por criterio
-  BE-->>PX: resultado
-  PX-->>UI: estado y score
+  UI->>PX: POST evaluation (rubric + repo + briefing)
+  PX->>BE: create evaluation
+  BE->>AI: evaluation calls per criterion
+  BE-->>PX: result
+  PX-->>UI: status and score
 ```
 
-Comportamiento de IA desde frontend:
-- Si no eliges proveedor/modelo, usa defaults del backend.
-- Si eliges proveedor/modelo, se envían explícitamente.
-- Si el usuario añade API key, se manda vía `X-API-Key`.
+AI behavior from frontend:
+- If you don't choose provider/model, uses backend defaults.
+- If you choose provider/model, they are sent explicitly.
+- If the user adds an API key, it's sent via `X-API-Key`.
 
 ---
 
-## ✅ Qué se ha hecho en este frontend
+## ✅ What has been done in this frontend
 
-### Funcional
+### Functional
 
-- Se corrigió el envío de `ai_provider` y `ai_model` desde nueva evaluación.
-- Se corrigió el envío opcional de `X-API-Key`.
-- Se alineó el proveedor a `groq` en tipos y UI.
-- Se mantuvo el comportamiento de defaults del servidor cuando procede.
+- Fixed sending `ai_provider` and `ai_model` from new evaluation.
+- Fixed optional sending of `X-API-Key`.
+- Aligned provider to `groq` in types and UI.
+- Maintained server defaults behavior when applicable.
 
-### UX y responsive
+### UX and responsive
 
-- Mejoras de spacing mobile en dashboard y evaluaciones.
-- Mejor wrapping de texto/links/código en markdown.
-- Mejor comportamiento de tablas y contenido largo en móvil.
-- Ajustes en badges/metadatos para no romper layout en 320px.
+- Mobile spacing improvements in dashboard and evaluations.
+- Better text/links/code wrapping in markdown.
+- Better table behavior and long content on mobile.
+- Adjustments in badges/metadata to avoid breaking layout at 320px.
 
-### Calidad técnica
+### Technical quality
 
-- Proxy robusto documentado.
-- README reestructurado para onboarding más claro y rápido.
-- Guía de troubleshooting y operación más clara.
+- Documented robust proxy.
+- Restructured README for clearer and faster onboarding.
+- Clearer troubleshooting and operation guide.
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Project structure
 
 ```text
 frontend/
@@ -302,35 +302,35 @@ frontend/
 
 ---
 
-## ⚙️ Configuración de entorno
+## ⚙️ Environment configuration
 
-Crea tu archivo de entorno:
+Create your environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Dónde aplica | Qué hace | Valor por defecto |
+| Variable | Where it applies | What it does | Default value |
 |---|---|---|---|
-| `BACKEND_URL` | Solo server-side | URL objetivo del proxy | `http://backend:8000` |
+| `BACKEND_URL` | Server-side only | Proxy target URL | `http://backend:8000` |
 
-Buenas prácticas:
-- No guardar API keys sensibles en frontend.
-- Mantener secretos en backend o en entrada de usuario runtime.
+Best practices:
+- Don't store sensitive API keys in frontend.
+- Keep secrets in backend or user runtime input.
 
 ---
 
-## 🚀 Run local rápido
+## 🚀 Quick local run
 
 ```bash
 npm install
 npm run dev
 ```
 
-Abre:
+Open:
 - `http://localhost:3000`
 
-Otros comandos:
+Other commands:
 
 ```bash
 npm run build
@@ -340,23 +340,23 @@ npm run lint
 
 ---
 
-## 🐳 Docker (dev y prod)
+## 🐳 Docker (dev and prod)
 
-### Desarrollo
+### Development
 
 - `Dockerfile.dev`
 - Node 20-slim
-- Hot reload con volúmenes
-- Puerto 3000
+- Hot reload with volumes
+- Port 3000
 
-### Producción
+### Production
 
 - `Dockerfile.prod`
-- Build multi-stage standalone
-- Usuario no-root
+- Multi-stage standalone build
+- Non-root user
 - Healthcheck
 
-Si cambias variables de entorno, recrea contenedor:
+If you change environment variables, recreate container:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
@@ -364,48 +364,70 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate frontend
 
 ---
 
-## 📱 Responsive y UX móvil
+## 🐳 Docker-in-Docker Support
 
-Mejoras aplicadas:
-- Drawer móvil en navegación.
-- Paddings adaptativos en vistas críticas.
-- Render markdown endurecido para contenido largo.
-- Mejor legibilidad en evaluación detalle (320px).
+This project supports Docker-in-Docker for CI/CD environments and development workflows. The management script (`manage.sh`) provides container orchestration for frontend development:
 
-Checklist manual:
+```bash
+# Start all services with Docker-in-Docker support
+./manage.sh all
+
+# Rebuild all images from scratch (includes frontend)
+./manage.sh rebuild
+```
+
+### Frontend-specific Commands
+
+For frontend development, use these management script commands:
+
+- `all` - Start all services (includes frontend)
+- `rebuild` - Rebuild all images from scratch (includes frontend)
+- `stop` - Stop all services
+
+---
+
+## 📱 Responsive and mobile UX
+
+Applied improvements:
+- Mobile drawer in navigation.
+- Adaptive paddings in critical views.
+- Hardened markdown render for long content.
+- Better readability in evaluation detail (320px).
+
+Manual checklist:
 - Viewport 320x824
-- Revisar `/dashboard`, `/past-evaluations`, `/past-evaluations/[id]`
-- Confirmar sin clipping horizontal inesperado
+- Review `/dashboard`, `/past-evaluations`, `/past-evaluations/[id]`
+- Confirm no unexpected horizontal clipping
 
 ---
 
 ## 🛠️ Troubleshooting
 
-### Backend no responde
+### Backend doesn't respond
 
-- Revisa contenedor backend.
-- Revisa `BACKEND_URL`.
-- Revisa logs del proxy route handler.
+- Check backend container.
+- Check `BACKEND_URL`.
+- Check proxy route handler logs.
 
-### No veo cambios en frontend
+### I don't see frontend changes
 
 1. Hard refresh (`Ctrl+Shift+R`).
-2. Reinicia frontend.
-3. Si cambiaste env, usa recreate (`--force-recreate`).
+2. Restart frontend.
+3. If you changed env, use recreate (`--force-recreate`).
 
-### Error de autenticación con proveedor IA
+### AI provider authentication error
 
-- Verifica variables activas dentro del contenedor backend.
-- Revisa claves duplicadas en `.env`.
-- Comprueba si `X-API-Key` está sobreescribiendo key de servidor.
+- Verify active variables inside backend container.
+- Check for duplicate keys in `.env`.
+- Verify if `X-API-Key` is overriding server key.
 
 ---
 
-## 🤝 Contribución
+## 🤝 Contribution
 
-1. Crear rama desde `development`.
-2. Reutilizar componentes existentes antes de crear nuevos.
-3. Mantener llamadas API relativas a `/api/v1`.
-4. Añadir capturas de pantalla cuando haya cambios de UI.
+1. Create branch from `main`.
+2. Reuse existing components before creating new ones.
+3. Keep API calls relative to `/api/v1`.
+4. Add screenshots when there are UI changes.
 
 ---
