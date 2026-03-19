@@ -30,17 +30,17 @@ const MODELS_BY_PROVIDER: Record<string, SelectOption[]> = {
   gemini: [
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-1.5-pro',   label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
   ],
   groq: [
     { value: 'llama-3.3-70b-versatile', label: 'LLaMA 3.3 70B' },
-    { value: 'llama3-8b-8192',          label: 'LLaMA 3 8B' },
-    { value: 'mixtral-8x7b-32768',      label: 'Mixtral 8x7B' },
+    { value: 'llama-3.1-8b-instant', label: 'LLaMA 3.1 8B Instant' },
+    { value: 'llama-3.1-70b-versatile', label: 'LLaMA 3.1 70B' },
   ],
   openai: [
-    { value: 'gpt-4o',      label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4o', label: 'GPT-4o' },
   ],
 };
 
