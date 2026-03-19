@@ -5,7 +5,7 @@ Uses FakeEmbeddings from langchain so tests run without a real API key.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import FakeEmbeddings

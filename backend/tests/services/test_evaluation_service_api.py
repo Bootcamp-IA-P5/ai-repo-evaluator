@@ -4,9 +4,6 @@ Unit tests for EvaluationServiceAPI.
 This module contains comprehensive tests for the EvaluationServiceAPI class,
 covering all CRUD operations and error handling scenarios.
 """
-
-import pytest
-import json
 from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
 from fastapi import BackgroundTasks

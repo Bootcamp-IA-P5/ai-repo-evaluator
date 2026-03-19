@@ -15,7 +15,6 @@ from schemas.rubric import (
     RubricResponseWithCriteria,
     RubricRequest,
     RubricUpdateRequest,
-    CriterionResponse,
     CriterionResponseWithLevels,
     CriterionRequest,
     CriterionUpdateRequest,

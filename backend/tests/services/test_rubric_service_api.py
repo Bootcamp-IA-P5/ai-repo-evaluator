@@ -4,9 +4,7 @@ Unit tests for RubricServiceAPI.
 This module contains comprehensive tests for the RubricServiceAPI class,
 covering all CRUD operations and error handling scenarios.
 """
-
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from sqlalchemy.orm import Session
 
 from services.rubric_service_api import RubricServiceAPI
@@ -443,7 +441,7 @@ class TestRubricServiceAPIDelete:
         self, db_session: Session, rubric_with_criteria, rubric_service: RubricServiceAPI
     ):
         """Test delete cascades to associated criteria and levels."""
-        from models import Criterion, Level
+        from models import Criterion
 
         rubric_id = rubric_with_criteria.id
         criterion_ids = [c.id for c in rubric_with_criteria.criteria]

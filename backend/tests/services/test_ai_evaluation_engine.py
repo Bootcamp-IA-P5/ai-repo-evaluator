@@ -6,19 +6,14 @@ covering all evaluation operations and error handling scenarios.
 """
 
 import pytest
-import json
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 
 from services.ai_evaluation_engine import AIEvaluationEngine
 from services.evaluation_service_api import run_evaluation_task
 from services.ai_client import AIProvider
-from models import Evaluation, Rubric, Criterion, Level, Finding
+from models import Evaluation, Finding
 from core.settings import settings
-from core.messages import Messages
-from core.database import SessionLocal
-from schemas.response import APIResponse
-from schemas.evaluation import EvaluationResponse, EvaluationResponseWithFindings, FindingResponse
 
 
 class TestAIEvaluationEngine:
