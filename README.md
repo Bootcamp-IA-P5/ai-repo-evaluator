@@ -17,6 +17,32 @@ A full-stack application for evaluating repositories using AI-powered analysis. 
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+## 👥 Team Members
+
+- **Ciprian Nica** - Development
+- **Óscar Rodríguez** - Scrum Master and Development  
+- **Yeder Pimentel** - Product Owner and Development
+
+## 📋 Project Organization
+
+| Role | Team Member | Responsibilities |
+|------|-------------|------------------|
+| **Scrum Master** | Óscar Rodríguez | Development coordination, sprint management |
+| **Product Owner** | Yeder Pimentel | Requirements gathering, backlog management, development |
+| **Development** | Ciprian Nica | Feature implementation and code development |
+| **Stakeholder** | David Robert | Project oversight and guidance |
+
+## 📚 Documentation
+
+This project includes detailed documentation for each component:
+
+- **[Backend Documentation](/backend/README.md)** - Comprehensive API documentation, database schema, AI evaluation workflow, and backend development guide
+- **[Frontend Documentation](/frontend/README.md)** - UI component library, page flows, responsive design guidelines, and frontend development guide
+
+## 🔗 Related Links
+
+- **[GitHub Project Board](https://github.com/orgs/Bootcamp-IA-P5/projects/40)** - Project management and task tracking
+
 ## 🛠️ Tech Stack
 
 ### Backend
@@ -27,21 +53,32 @@ A full-stack application for evaluating repositories using AI-powered analysis. 
 | Uvicorn | 0.27.0 | ASGI server with hot-reload |
 | SQLAlchemy | 2.0.25 | ORM |
 | Alembic | 1.13.1 | Database migrations |
-| psycopg2 | 2.9.9 | PostgreSQL adapter |
-| LangChain | 0.1.9 | AI/LLM framework |
-| LangChain OpenAI | 0.0.8 | OpenAI integrations |
-| FAISS | 1.7.4 | Vector similarity search |
-| PyPDF | 4.0.1 | PDF processing |
-| TikToken | 0.6.0 | Token counting |
+| psycopg2-binary | 2.9.9 | PostgreSQL adapter |
+| LangChain | 1.2.10 | AI/LLM framework |
+| LangChain Community | 0.4.1 | LangChain ecosystem extensions |
+| LangChain Core | 1.2.16 | Core LangChain functionality |
+| LangChain OpenAI | 1.1.10 | OpenAI integrations |
+| LangChain Google GenAI | 4.2.1 | Google Gemini integrations |
+| FAISS | 1.13.2 | Vector similarity search |
+| PyPDF | 6.0.0 | PDF processing |
+| TikToken | 0.12.0 | Token counting |
+| OpenAI | 2.24.0 | OpenAI API client |
+| Google Generative AI | 1.66.0 | Google AI models |
+| Groq | 1.0.0 | Groq API client |
+| GitPython | 3.1.43 | Git repository operations |
+| Pydantic Settings | 2.13.1 | Configuration management |
 
 ### Frontend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| React | 18.2.0 | UI library |
-| Vite | 5.1.0 | Build tool & dev server |
-| TailwindCSS | 3.4.1 | Styling framework |
-| Axios | 1.6.7 | HTTP client |
-| Lucide React | 0.344.0 | Icon library |
+| React | 19.2.3 | UI library |
+| Next.js | 16.1.6 | React framework & build tool |
+| TailwindCSS | 4.x | Styling framework |
+| Axios | 1.13.5 | HTTP client |
+| Lucide React | 0.575.0 | Icon library |
+| React Markdown | 10.1.0 | Markdown rendering |
+| Recharts | 3.7.0 | Data visualization |
+| Remark GFM | 4.0.1 | GitHub-flavored markdown |
 
 ### Infrastructure
 | Technology | Version | Purpose |
@@ -49,19 +86,36 @@ A full-stack application for evaluating repositories using AI-powered analysis. 
 | PostgreSQL | 15 Alpine | Relational database |
 | Docker | - | Containerization |
 | Docker Compose | - | Multi-container orchestration |
+| LangGraph | - | AI workflow monitoring and orchestration |
 
 ## 📋 Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+) or Docker Compose V1 (`docker-compose`)
 
-> **Note:** The management scripts automatically detect whether you have `docker compose` (V2) or `docker-compose` (V1) installed.
+> **Note:** This project uses Docker-in-Docker development. The management scripts are designed for Linux/macOS systems.
 
 ### Platform-Specific Scripts
 
 | Platform | Script | Description |
 |----------|--------|-------------|
-| Linux/macOS | `manage.sh` | Bash script |
+| Linux/macOS | `manage.sh` | Bash script with Docker-in-Docker support |
+| Windows | Manual Docker commands | Use `docker compose` commands directly (see [Windows Setup](#windows-support)) |
+
+### Windows Support
+
+For Windows users, the project supports Docker Desktop with WSL2 backend. Use these commands instead of the management script:
+
+```bash
+# Start all services
+docker compose -f docker-compose.dev.yml up -d
+
+# View logs
+docker compose -f docker-compose.dev.yml logs -f
+
+# Stop services
+docker compose -f docker-compose.dev.yml down
+```
 
 ## 🚀 Quick Start
 
