@@ -61,7 +61,8 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = ""
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = ""
-    EMBEDDING_MODEL: str = "models/gemini-embedding-001"
+    GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     
 
     # GitLoader Configuration

@@ -15,11 +15,11 @@ from models import Evaluation, Rubric
 from schemas.response import APIResponse
 from schemas.evaluation import EvaluationResponse, EvaluationResponseWithFindings, FindingResponse
 from services.pdf_processor import BriefingProcessor
-from services.ai_evaluation_engine import AIEvaluationEngine, run_evaluation_task as ai_run_evaluation_task
+from services.ai_evaluation_engine import AIEvaluationEngine#, run_evaluation_task as ai_run_evaluation_task
 from core.logging_config import logger
 from core.messages import Messages
 from core.database import SessionLocal
-from core.settings import AIProvider, settings
+from core.settings import AIProvider, settings, get_model, get_api_key
 
 
 class EvaluationServiceAPI:
@@ -48,7 +48,6 @@ class EvaluationServiceAPI:
             evaluation_request: The evaluation data to create
             background_tasks: FastAPI BackgroundTasks for async processing
             db_url: Database URL for background task session
-
         Returns:
             APIResponse containing the created evaluation with status 'pending',
             or error information if validation fails.
@@ -230,7 +229,7 @@ def run_evaluation_task(
     db_url: str,
     ai_provider: str = None,
     ai_model: str = None,
-    ai_api_key: str = None
+    ai_api_key: str = None,
 ):
     """
     Background task for running the AI evaluation process.
@@ -261,11 +260,40 @@ def run_evaluation_task(
         evaluation.status = settings.EVALUATION_STATUS_PROCESSING
         db.commit()
         logger.debug(f"Evaluation {evaluation_id} status updated to '{settings.EVALUATION_STATUS_PROCESSING}'")
-
-        # 2. Initialize AI evaluation engine
-        if not ai_provider:
+        
+        
+        # 1. Resolve ai provider, model and api_key based on the payload received from the frontend
+        if ai_provider is None:
             ai_provider = AIProvider.GEMINI
-        ai_engine = AIEvaluationEngine(provider = ai_provider, model = ai_model, api_key = ai_api_key)
+        if ai_model is None:
+            ai_model = get_model(ai_provider)
+        if ai_api_key is None: 
+            ai_api_key = get_api_key(ai_provider)
+        
+        # 2. Resolve embedding configuration based on business logic
+        if ai_provider == AIProvider.GROQ:
+            resolved_emb_provider = AIProvider.GEMINI
+            resolved_emb_model = settings.GEMINI_EMBEDDING_MODEL
+            resolved_emb_key =settings.GEMINI_API_KEY
+            logger.debug("Hybrid mode: Chat with GROQ and search with GEMINI")
+        else:
+            # For OpenAI and Gemini, use the same provider for embeddings
+            resolved_emb_provider = ai_provider
+            if ai_provider == AIProvider.OPENAI:
+                resolved_emb_model = settings.OPENAI_EMBEDDING_MODEL
+            else:
+                resolved_emb_model = settings.GEMINI_EMBEDDING_MODEL
+            resolved_emb_key = ai_api_key
+            
+        # 3. Initialize AI evaluation engine
+        ai_engine = AIEvaluationEngine(
+            provider=ai_provider, 
+            model=ai_model, 
+            api_key=ai_api_key,
+            embedding_provider=resolved_emb_provider,
+            embedding_model=resolved_emb_model,
+            embedding_api_key=resolved_emb_key,
+        )
 
         # 3. Parse briefing chunks from snapshot
         try:
@@ -284,7 +312,7 @@ def run_evaluation_task(
                 briefing_chunks=briefing_chunks
             )
             
-            logger.info(f"AI evaluation completed for evaluation {evaluation_id}")
+            logger.debug(f"AI evaluation completed for evaluation {evaluation_id}")
             
         except Exception as e:
             logger.error(f"AI evaluation failed for evaluation {evaluation_id}: {e}")
@@ -311,7 +339,7 @@ def run_evaluation_task(
         
         db.commit()
 
-        logger.info(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
+        logger.debug(f"Evaluation {evaluation_id} completed successfully with score {evaluation_result['total_score']:.2f}")
 
     except Exception as e:
         # 4. On failure, update status to 'failed'

@@ -11,6 +11,7 @@ for each rubric criterion evaluation.
 
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_core.documents import Document
 
 from core.logging_config import logger
@@ -28,43 +29,47 @@ class ContextEngine:
     evaluation criterion.
 
     Attributes:
-        embeddings: GoogleGenerativeAIEmbeddings instance for vectorization.
+        embeddings: The Embeddings instance (Google or OpenAI) for vectorization.
         vector_store: FAISS index built from the provided documents.
     """
 
-    def __init__(self, documents: list[DocumentInput], google_api_key: str = None):
+    def __init__(
+        self,
+        documents: list[DocumentInput],
+        embedding_provider: str = None,
+        embedding_model: str = None,
+        embedding_api_key: str = None,
+    ):
         """
         Initialize the context engine with documents and build the FAISS index.
 
         Args:
             documents: List of document dicts with 'page_content' and 'metadata'
                     keys, or langchain Document objects.
-            google_api_key: Google API key for Gemini embeddings. If None, reads
-                            from settings.GEMINI_API_KEY (BYOK pattern).
+            embedding_provider: Optional "gemini" or "openai". Evaluates to settings default if None.
+            embedding_model: Optional specific model name. Evaluates to settings default if None.
+            embedding_api_key: Optional API key. Evaluates to environment key if None.
 
         Raises:
-            ValueError: If documents list is empty.
+            ValueError: If documents list is empty or provider is unsupported.
         """
         if not documents:
             raise ValueError("Cannot create ContextEngine with an empty document list.")
 
-        # Lazy import to avoid triggering pydantic validation at module level
-        from core.settings import settings
-
-        # BYOK: use provided key or fall back to environment config
-        api_key = google_api_key or settings.GEMINI_API_KEY
-        self.embeddings = GoogleGenerativeAIEmbeddings(
-            model=settings.EMBEDDING_MODEL,
-            google_api_key=api_key,
+        # Create the correct embeddings client using the factory method
+        self.embeddings = self._create_embeddings(
+            provider=embedding_provider,
+            model=embedding_model,
+            api_key=embedding_api_key
         )
 
         # Extract texts and metadatas from documents (support both dict and Document)
         texts, metadatas = self._extract_texts_and_metadatas(documents)
 
         # Build the FAISS vector store
-        logger.info(f"Building FAISS index with {len(texts)} document chunks...")
+        logger.debug(f"Building FAISS index with {len(texts)} document chunks...")
         self.vector_store = FAISS.from_texts(texts, self.embeddings, metadatas=metadatas)
-        logger.info("FAISS index created successfully.")
+        logger.debug("FAISS index created successfully.")
 
     def get_relevant_context(self, query: str, k: int = 5) -> list[dict]:
         """
@@ -113,7 +118,7 @@ s
         texts, metadatas = self._extract_texts_and_metadatas(documents)
 
         self.vector_store.add_texts(texts, metadatas=metadatas)
-        logger.info(f"Added {len(texts)} documents to FAISS index.")
+        logger.debug(f"Added {len(texts)} documents to FAISS index.")
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -149,3 +154,30 @@ s
                 )
 
         return texts, metadatas
+
+    @staticmethod
+    def _create_embeddings(provider: str = None, model: str = None, api_key: str = None):
+        """
+        Factory method to create the appropriate Embeddings instance.
+        """
+        from core.settings import settings, get_api_key, AIProvider
+        
+        
+
+        # Create specific embedding provider
+        if provider == AIProvider.GEMINI:
+            return GoogleGenerativeAIEmbeddings(
+                model=model,
+                google_api_key=api_key,
+            )
+            
+        elif provider == AIProvider.OPENAI:
+            return OpenAIEmbeddings(
+                model=model,
+                api_key=api_key,
+            )
+            
+        else:
+            message=f"Unupported embedding provider: {provider}, model: {model}"
+            logger.error(message)
+            raise ValueError(message)

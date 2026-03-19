@@ -87,7 +87,7 @@ class FileUploadService:
             try:
                 server_path = self._save_file_to_server(file_content, file_path)
                 
-                logger.info(f"Successfully uploaded briefing file: {file.filename} -> {server_path}")
+                logger.debug(f"Successfully uploaded briefing file: {file.filename} -> {server_path}")
                 
                 return UploadResponse(
                     success=True,

@@ -45,7 +45,7 @@ class EvaluationRequest(BaseModel):
             if v not in valid_providers:
                 raise ValueError(f"ai_provider must be one of: {', '.join(valid_providers)}")
         return v
-
+        
     @field_validator('ai_model')
     @classmethod
     def validate_ai_model(cls, v, info):
