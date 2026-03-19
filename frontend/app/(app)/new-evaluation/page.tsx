@@ -13,7 +13,7 @@ import {
 } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
 import type { SelectOption } from '@/components/ui';
-import { uploadBriefingFile, validateFile, formatFileSize } from '@/lib/services/file-upload';
+import { uploadBriefingFile, validateFile } from '@/lib/services/file-upload';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,6 +95,7 @@ export default function NewEvaluationPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   
   // File upload state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
