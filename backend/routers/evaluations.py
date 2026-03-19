@@ -6,7 +6,7 @@ using dependency injection for both database sessions and service instances.
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, status, BackgroundTasks, Header, HTTPException
+from fastapi import APIRouter, Depends, status, BackgroundTasks, Header
 
 from core.database import get_db, SQLALCHEMY_DATABASE_URL
 from core.settings import settings

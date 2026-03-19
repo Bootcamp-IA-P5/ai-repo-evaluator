@@ -3,12 +3,7 @@ Tests unitarios para BriefingProcessor.
 
 Verifica que process() devuelve objetos Document de langchain con metadatos correctos.
 """
-
-import os
-import tempfile
-
 import pytest
-from unittest.mock import patch, MagicMock
 
 from langchain_core.documents import Document
 

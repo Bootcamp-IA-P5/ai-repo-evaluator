@@ -160,7 +160,7 @@ s
         """
         Factory method to create the appropriate Embeddings instance.
         """
-        from core.settings import settings, get_api_key, AIProvider
+        from core.settings import AIProvider
         
         
 

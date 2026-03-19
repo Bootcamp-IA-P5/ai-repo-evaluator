@@ -15,7 +15,6 @@ import os
 
 from core.settings import settings
 from core.logging_config import logger
-from core.messages import Messages
 
 
 class UploadResponse(BaseModel):

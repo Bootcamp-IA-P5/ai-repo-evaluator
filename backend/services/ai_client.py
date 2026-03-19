@@ -4,7 +4,7 @@ from typing import Optional
 from openai import OpenAI
 import google.genai as genai
 from groq import Groq
-from core.settings import settings, get_api_key
+from core.settings import get_api_key
 from core.logging_config import logger
 from core.messages import Messages
 from langsmith import traceable

@@ -11,19 +11,16 @@ This module orchestrates the complete AI evaluation workflow:
 
 import json
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 
 from core.logging_config import logger
 from core.settings import settings, get_api_key, get_model, AIProvider
 from core.database import SessionLocal
 from core.messages import Messages
-from models import Evaluation, Rubric, Criterion, Level, Finding
+from models import Rubric, Criterion, Level
 from services.git_loader import GitLoaderService
 from services.ai_client import AIClient, AIProvider
 from services.context_engine import ContextEngine
 from services.prompts import build_grading_prompt, build_summary_prompt
-import os
 
 
 class AIEvaluationEngine:

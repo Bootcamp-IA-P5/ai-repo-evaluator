@@ -25,7 +25,7 @@ Database: PostgreSQL or SQLite (via SQLAlchemy)
 """
 
 import datetime
-from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
