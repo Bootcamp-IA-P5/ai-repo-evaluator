@@ -220,3 +220,110 @@ def rubric_service():
     from services.rubric_service_api import RubricServiceAPI
 
     return RubricServiceAPI()
+
+
+@pytest.fixture
+def evaluation_service():
+    """
+    Create an EvaluationServiceAPI instance for testing.
+
+    Returns:
+        EvaluationServiceAPI: A service instance
+    """
+    from services.evaluation_service_api import EvaluationServiceAPI
+
+    return EvaluationServiceAPI()
+
+
+@pytest.fixture
+def sample_evaluations(db_session: Session, sample_rubrics: list):
+    """
+    Create multiple sample evaluations for testing list operations.
+
+    Args:
+        db_session: The database session fixture
+        sample_rubrics: List of sample rubrics to associate with evaluations
+
+    Returns:
+        list[Evaluation]: A list of sample evaluation instances
+    """
+    from models import Evaluation
+
+    evaluations = [
+        Evaluation(
+            rubric_id=sample_rubrics[0].id,
+            repo_url="https://github.com/test/repo1",
+            briefing_snapshot='[{"test": "data"}]',
+            status="pending",
+        ),
+        Evaluation(
+            rubric_id=sample_rubrics[1].id,
+            repo_url="https://github.com/test/repo2",
+            briefing_snapshot='[{"test": "data"}]',
+            status="completed",
+            total_score=3.5,
+            ai_summary="Test summary for repo2",
+        ),
+        Evaluation(
+            rubric_id=sample_rubrics[2].id,
+            repo_url="https://github.com/test/repo3",
+            briefing_snapshot='[{"test": "data"}]',
+            status="failed",
+        ),
+    ]
+    db_session.add_all(evaluations)
+    db_session.commit()
+    for evaluation in evaluations:
+        db_session.refresh(evaluation)
+    return evaluations
+
+
+@pytest.fixture
+def evaluation_with_findings(db_session: Session, rubric_with_criteria):
+    """
+    Create an evaluation with nested findings for testing.
+
+    This fixture creates a complete evaluation structure including:
+    - 1 Evaluation
+    - 2 Findings (one for each criterion)
+    - Associated with rubric criteria
+
+    Args:
+        db_session: The database session fixture
+        rubric_with_criteria: A rubric with nested criteria
+
+    Returns:
+        Evaluation: An evaluation instance with nested findings
+    """
+    from models import Evaluation, Finding
+
+    evaluation = Evaluation(
+        rubric_id=rubric_with_criteria.id,
+        repo_url="https://github.com/test/repo",
+        briefing_snapshot='[{"test": "data"}]',
+        status="completed",
+        total_score=3.5,
+        ai_summary="Test summary",
+    )
+    db_session.add(evaluation)
+    db_session.commit()
+    db_session.refresh(evaluation)
+
+    # Create findings for each criterion
+    for criterion in rubric_with_criteria.criteria:
+        # Get the first level for this criterion
+        level = criterion.levels[0]
+        
+        finding = Finding(
+            evaluation_id=evaluation.id,
+            criterion_id=criterion.id,
+            selected_level_id=level.id,
+            file_path=f"/src/{criterion.title.lower().replace(' ', '_')}.py",
+            evidence_snippet=f"def {criterion.title.lower().replace(' ', '_')}_function(): pass",
+            improvement_suggestion=f"Add more comprehensive {criterion.title.lower()}",
+        )
+        db_session.add(finding)
+
+    db_session.commit()
+    db_session.refresh(evaluation)
+    return evaluation

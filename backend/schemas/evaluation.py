@@ -179,5 +179,108 @@ class FindingResponse(BaseModel):
     improvement_suggestion: Optional[str] = None
 
 
+# =============================================================================
+# UPDATE REQUEST SCHEMAS
+# =============================================================================
+
+
+class EvaluationUpdateRequest(BaseModel):
+    """
+    Request schema for updating an existing Evaluation.
+
+    Attributes:
+        status: New status for the evaluation (pending, processing, completed, failed)
+        total_score: New total score for the evaluation
+        ai_summary: New AI-generated summary
+    """
+
+    status: Optional[str] = Field(None, description="New status: pending, processing, completed, or failed")
+    total_score: Optional[float] = Field(None, description="New total score")
+    ai_summary: Optional[str] = Field(None, description="New AI-generated summary")
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v):
+        """Validate that status is one of the supported values."""
+        if v is not None:
+            valid_statuses = ['pending', 'processing', 'completed', 'failed']
+            if v not in valid_statuses:
+                raise ValueError(f"status must be one of: {', '.join(valid_statuses)}")
+        return v
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "status": "completed",
+                    "total_score": 4.5,
+                    "ai_summary": "Updated evaluation summary"
+                }
+            ]
+        }
+    }
+
+
+class FindingRequest(BaseModel):
+    """
+    Request schema for creating a new Finding.
+
+    Attributes:
+        criterion_id: ID of the criterion being evaluated
+        selected_level_id: ID of the selected scoring level
+        file_path: Location in repository where evidence was found
+        evidence_snippet: Code excerpt demonstrating the finding
+        improvement_suggestion: Recommended action for improvement
+    """
+
+    criterion_id: int
+    selected_level_id: Optional[int] = None
+    file_path: Optional[str] = None
+    evidence_snippet: Optional[str] = None
+    improvement_suggestion: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "criterion_id": 1,
+                    "selected_level_id": 1,
+                    "file_path": "/src/main.py",
+                    "evidence_snippet": "def example(): pass",
+                    "improvement_suggestion": "Add docstring"
+                }
+            ]
+        }
+    }
+
+
+class FindingUpdateRequest(BaseModel):
+    """
+    Request schema for updating an existing Finding.
+
+    Attributes:
+        selected_level_id: New selected scoring level
+        file_path: New location in repository where evidence was found
+        evidence_snippet: New code excerpt demonstrating the finding
+        improvement_suggestion: New recommended action for improvement
+    """
+
+    selected_level_id: Optional[int] = None
+    file_path: Optional[str] = None
+    evidence_snippet: Optional[str] = None
+    improvement_suggestion: Optional[str] = None
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "file_path": "/src/updated.py",
+                    "improvement_suggestion": "Updated suggestion"
+                }
+            ]
+        }
+    }
+
+
 # Update forward references
 EvaluationResponseWithFindings.model_rebuild()
