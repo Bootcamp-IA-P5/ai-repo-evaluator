@@ -86,7 +86,9 @@ class EvaluationServiceAPI:
                 )
             except Exception as e:
                 logger.error(f"Failed to process briefing: {e}")
-                os.remove(evaluation_request.briefing_path)
+                # Only try to remove the file if it exists
+                if os.path.exists(evaluation_request.briefing_path):
+                    os.remove(evaluation_request.briefing_path)
                 return APIResponse(
                     success=False,
                     data=None,
@@ -120,7 +122,9 @@ class EvaluationServiceAPI:
                 ai_api_key=evaluation_request.ai_api_key,
             )
 
-            os.remove(evaluation_request.briefing_path)
+            # Only try to remove the file if it exists
+            if os.path.exists(evaluation_request.briefing_path):
+                os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=True,
                 data=evaluation_response,
@@ -130,7 +134,9 @@ class EvaluationServiceAPI:
         except Exception as e:
             db.rollback()
             logger.error(f"Failed to create evaluation: {e}")
-            os.remove(evaluation_request.briefing_path)
+            # Only try to remove the file if it exists
+            if os.path.exists(evaluation_request.briefing_path):
+                os.remove(evaluation_request.briefing_path)
             return APIResponse(
                 success=False,
                 data=None,
@@ -218,6 +224,339 @@ class EvaluationServiceAPI:
                 message=Messages.Evaluation.LIST_RETRIEVE_FAILED,
             )
 
+    def update(
+        self, db: Session, evaluation_id: int, evaluation_request
+    ) -> APIResponse[EvaluationResponse]:
+        """
+        Update an existing evaluation.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the evaluation to update
+            evaluation_request: The update data for the evaluation
+
+        Returns:
+            APIResponse containing the updated evaluation on success,
+            or error information if not found or update fails.
+        """
+        try:
+            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+
+            if evaluation is None:
+                logger.warning(Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id)],
+                    message=Messages.Evaluation.NOT_FOUND,
+                )
+
+            # Update fields if provided
+            if evaluation_request.status is not None:
+                evaluation.status = evaluation_request.status
+            if evaluation_request.total_score is not None:
+                evaluation.total_score = evaluation_request.total_score
+            if evaluation_request.ai_summary is not None:
+                evaluation.ai_summary = evaluation_request.ai_summary
+
+            db.commit()
+            db.refresh(evaluation)
+
+            evaluation_response = EvaluationResponse.model_validate(evaluation)
+
+            logger.debug(f"Updated evaluation {evaluation_id}")
+
+            return APIResponse(
+                success=True,
+                data=evaluation_response,
+                errors=None,
+                message=Messages.Evaluation.UPDATED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to update evaluation {evaluation_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Evaluation.UPDATE_FAILED,
+            )
+
+    def delete(self, db: Session, evaluation_id: int) -> APIResponse[None]:
+        """
+        Delete an evaluation by ID.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the evaluation to delete
+
+        Returns:
+            APIResponse indicating success or failure.
+        """
+        try:
+            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+
+            if evaluation is None:
+                logger.warning(Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id)],
+                    message=Messages.Evaluation.NOT_FOUND,
+                )
+
+            db.delete(evaluation)
+            db.commit()
+
+            logger.debug(f"Deleted evaluation {evaluation_id}")
+
+            return APIResponse(
+                success=True,
+                data=None,
+                errors=None,
+                message=Messages.Evaluation.DELETED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to delete evaluation {evaluation_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Evaluation.DELETE_FAILED,
+            )
+
+    def get_finding_by_id(
+        self, db: Session, evaluation_id: int, finding_id: int
+    ) -> APIResponse[FindingResponse]:
+        """
+        Retrieve a single finding by ID.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the parent evaluation
+            finding_id: The ID of the finding to retrieve
+
+        Returns:
+            APIResponse containing the finding on success,
+            or error information if not found.
+        """
+        try:
+            from models import Finding
+            
+            finding = db.query(Finding).filter(
+                Finding.id == finding_id,
+                Finding.evaluation_id == evaluation_id
+            ).first()
+
+            if finding is None:
+                logger.warning(Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id)],
+                    message=Messages.Finding.NOT_FOUND,
+                )
+
+            finding_response = FindingResponse.model_validate(finding)
+
+            logger.debug(f"Retrieved finding {finding_id}")
+
+            return APIResponse(
+                success=True,
+                data=finding_response,
+                errors=None,
+                message=Messages.Finding.RETRIEVED,
+            )
+        except Exception as e:
+            logger.error(f"Failed to retrieve finding {finding_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Finding.RETRIEVE_FAILED,
+            )
+
+    def create_finding(
+        self, db: Session, evaluation_id: int, finding_request
+    ) -> APIResponse[FindingResponse]:
+        """
+        Create a new finding for an evaluation.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the parent evaluation
+            finding_request: The finding data to create
+
+        Returns:
+            APIResponse containing the created finding on success,
+            or error information if evaluation not found or creation fails.
+        """
+        try:
+            from models import Finding, Evaluation
+            
+            # Verify evaluation exists
+            evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
+            if evaluation is None:
+                logger.warning(Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Evaluation.NOT_FOUND_DETAIL.format(id=evaluation_id)],
+                    message=Messages.Evaluation.NOT_FOUND,
+                )
+
+            finding = Finding(
+                evaluation_id=evaluation_id,
+                criterion_id=finding_request.criterion_id,
+                selected_level_id=finding_request.selected_level_id,
+                file_path=finding_request.file_path,
+                evidence_snippet=finding_request.evidence_snippet,
+                improvement_suggestion=finding_request.improvement_suggestion,
+            )
+
+            db.add(finding)
+            db.commit()
+            db.refresh(finding)
+
+            finding_response = FindingResponse.model_validate(finding)
+
+            logger.debug(f"Created finding {finding.id} for evaluation {evaluation_id}")
+
+            return APIResponse(
+                success=True,
+                data=finding_response,
+                errors=None,
+                message=Messages.Finding.CREATED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to create finding for evaluation {evaluation_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Finding.CREATE_FAILED,
+            )
+
+    def update_finding(
+        self, db: Session, evaluation_id: int, finding_id: int, finding_request
+    ) -> APIResponse[FindingResponse]:
+        """
+        Update an existing finding.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the parent evaluation
+            finding_id: The ID of the finding to update
+            finding_request: The update data for the finding
+
+        Returns:
+            APIResponse containing the updated finding on success,
+            or error information if not found or update fails.
+        """
+        try:
+            from models import Finding
+            
+            finding = db.query(Finding).filter(
+                Finding.id == finding_id,
+                Finding.evaluation_id == evaluation_id
+            ).first()
+
+            if finding is None:
+                logger.warning(Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id)],
+                    message=Messages.Finding.NOT_FOUND,
+                )
+
+            # Update fields if provided
+            if finding_request.selected_level_id is not None:
+                finding.selected_level_id = finding_request.selected_level_id
+            if finding_request.file_path is not None:
+                finding.file_path = finding_request.file_path
+            if finding_request.evidence_snippet is not None:
+                finding.evidence_snippet = finding_request.evidence_snippet
+            if finding_request.improvement_suggestion is not None:
+                finding.improvement_suggestion = finding_request.improvement_suggestion
+
+            db.commit()
+            db.refresh(finding)
+
+            finding_response = FindingResponse.model_validate(finding)
+
+            logger.debug(f"Updated finding {finding_id}")
+
+            return APIResponse(
+                success=True,
+                data=finding_response,
+                errors=None,
+                message=Messages.Finding.UPDATED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to update finding {finding_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Finding.UPDATE_FAILED,
+            )
+
+    def delete_finding(
+        self, db: Session, evaluation_id: int, finding_id: int
+    ) -> APIResponse[None]:
+        """
+        Delete a finding by ID.
+
+        Args:
+            db: SQLAlchemy database session
+            evaluation_id: The ID of the parent evaluation
+            finding_id: The ID of the finding to delete
+
+        Returns:
+            APIResponse indicating success or failure.
+        """
+        try:
+            from models import Finding
+            
+            finding = db.query(Finding).filter(
+                Finding.id == finding_id,
+                Finding.evaluation_id == evaluation_id
+            ).first()
+
+            if finding is None:
+                logger.warning(Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id))
+                return APIResponse(
+                    success=False,
+                    data=None,
+                    errors=[Messages.Finding.NOT_FOUND_DETAIL.format(id=finding_id)],
+                    message=Messages.Finding.NOT_FOUND,
+                )
+
+            db.delete(finding)
+            db.commit()
+
+            logger.debug(f"Deleted finding {finding_id}")
+
+            return APIResponse(
+                success=True,
+                data=None,
+                errors=None,
+                message=Messages.Finding.DELETED,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to delete finding {finding_id}: {e}")
+            return APIResponse(
+                success=False,
+                data=None,
+                errors=[str(e)],
+                message=Messages.Finding.DELETE_FAILED,
+            )
+
 
 # =============================================================================
 # BACKGROUND TASK
@@ -246,6 +585,7 @@ def run_evaluation_task(
         ai_api_key: API key for the provider - optional
     """
     # Create a new database session for the background task
+    # In test environments, this will use the mocked SessionLocal
     db = SessionLocal()
 
     try:

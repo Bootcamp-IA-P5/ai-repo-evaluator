@@ -46,13 +46,17 @@ class Messages:
 
         CREATED = "Evaluation created successfully"
         CREATE_FAILED = "Failed to create evaluation"
+        UPDATED = "Evaluation updated successfully"
+        UPDATE_FAILED = "Failed to update evaluation"
+        DELETED = "Evaluation deleted successfully"
+        DELETE_FAILED = "Failed to delete evaluation"
 
         # AI Summary Messages
         AI_SUMMARY_PENDING = "Evaluation completed. AI integration pending."
         AI_SUMMARY_FAILED = "Evaluation failed: {error}"
 
     class Finding:
-        """Finding-related messages (for future use)."""
+        """Finding-related messages."""
 
         LIST_RETRIEVED = "Findings retrieved successfully"
         LIST_RETRIEVE_FAILED = "Failed to retrieve findings"
@@ -60,6 +64,12 @@ class Messages:
         RETRIEVE_FAILED = "Failed to retrieve finding"
         NOT_FOUND = "Finding not found"
         NOT_FOUND_DETAIL = "Finding with id {id} not found"
+        CREATED = "Finding created successfully"
+        CREATE_FAILED = "Failed to create finding"
+        UPDATED = "Finding updated successfully"
+        UPDATE_FAILED = "Failed to update finding"
+        DELETED = "Finding deleted successfully"
+        DELETE_FAILED = "Failed to delete finding"
 
     class Criterion:
         """Criterion-related messages."""
