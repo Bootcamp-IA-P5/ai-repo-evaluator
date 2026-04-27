@@ -424,12 +424,18 @@ class AIEvaluationEngine:
             )
 
             if out_of_scope:
+                normalized_improvement = improvement_text.strip()
+                if not normalized_improvement:
+                    normalized_improvement = "N/A: criterio fuera del alcance del proyecto según el briefing."
+                elif not normalized_improvement.lower().startswith("n/a"):
+                    normalized_improvement = f"N/A: {normalized_improvement}"
+
                 return {
                     'criterion_id': criterion['id'],
                     'selected_level_id': None,
                     'file_path': response_data.get('file_path'),
                     'evidence_snippet': evidence_text or "Criterio fuera del alcance definido en el briefing.",
-                    'improvement_suggestion': improvement_text or "N/A: criterio fuera del alcance del proyecto según el briefing.",
+                    'improvement_suggestion': normalized_improvement,
                     'score_points': 0.0,
                     'is_not_applicable': True,
                 }

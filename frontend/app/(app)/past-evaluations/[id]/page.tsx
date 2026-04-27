@@ -465,6 +465,12 @@ export default function EvaluationDetailPage() {
                 const level     = finding.selected_level_id != null
                   ? levelMap[finding.selected_level_id]
                   : null;
+                const isOutOfScope =
+                  finding.selected_level_id === null &&
+                  (
+                    (finding.improvement_suggestion ?? '').toLowerCase().startsWith('n/a')
+                    || (finding.evidence_snippet ?? '').toLowerCase().includes('fuera del alcance')
+                  );
 
                 return (
                   <div
@@ -495,9 +501,13 @@ export default function EvaluationDetailPage() {
                           <span className="text-xs font-bold text-white bg-indigo-600 rounded-full px-2.5 py-1">
                             {level.score_points} pts — {level.level_title}
                           </span>
-                        ) : (
+                        ) : isOutOfScope ? (
                           <span className="text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1">
                             N/A — Fuera de alcance
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2.5 py-1">
+                            Sin nivel asignado
                           </span>
                         )}
                       </div>
